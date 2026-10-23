@@ -11,6 +11,7 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include <fstream>
 
 namespace Kites
 {
@@ -439,6 +440,19 @@ generateMachineCode(const std::vector<std::pair<ICUnit, bool>> &IntermediateCode
             throw std::runtime_error("Invalid instruction type: " + block.getOpcode());
         }
         machine_code.push_back(code);
+    }
+
+
+    {
+        std::ofstream outfile("instructions.hex");
+        if (outfile.is_open())
+        {
+            for (uint32_t code : machine_code)
+            {
+                outfile << "0x" << std::hex << std::setw(8) << std::setfill('0') << code << "\n";
+            }
+            outfile.close();
+        }
     }
     return machine_code;
 }
