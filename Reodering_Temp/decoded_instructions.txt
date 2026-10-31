@@ -1,77 +1,9 @@
-addi x1, x0, 256
-addi x2, x0, 512
-nop
-lw x3, 0(x1)
-lw x4, 4(x1)
-lw x6, 8(x1)
-lw x8, 12(x1)
-add x5, x3, x4
-lw x20, 16(x1)
-xor x9, x8, x3
-sub x7, x6, x5
-nop
-addi x10, x9, 7
+add x1, x2, x3
 nop
 nop
-and x11, x10, x8
-nop
-nop
-or x12, x11, x7
-nop
-nop
-sll x13, x12, x3
-nop
-nop
-srli x14, x13, 4
-nop
-nop
-sw x14, 0(x2)
-add x15, x14, x12
-nop
-nop
-unknown_r_type
-sw x15, 4(x2)
-nop
-addi x17, x16, 100
-nop
-nop
-sub x18, x17, x16
-nop
-nop
-slli x19, x18, 3
-nop
-nop
-sw x19, 8(x2)
-add x21, x20, x19
-nop
-nop
-andi x22, x21, 255
-nop
-nop
-ori x23, x22, 256
-nop
-nop
-xor x24, x23, x21
-nop
-nop
-sw x24, 12(x2)
-srli x25, x24, 1026
-nop
-nop
-unknown_r_type
-nop
-nop
-add x27, x25, x26
-nop
-nop
-sub x28, x27, x23
-nop
-nop
-sw x28, 16(x2)
-addi x29, x28, 209
-nop
-nop
-or x30, x29, x27
-nop
-nop
-sw x30, 20(x2)
+add x4, x5, x1
+unknown_opcode (0x63)
+unknown_load
+sub x0, x0, x7
+add x0, x0, x7
+add x0, x0, x7

@@ -57,7 +57,7 @@ std::string hex_to_text(uint32_t instr) {
 				else if (funct3 == 0x5) name = "sra";
             }
             
-			if (name == "add" && rd == 0 && rs1 == 0 && rd == 0) {
+			if (name == "add" && rd == 0 && rs1 == 0 && rs2 == 0) {
                 asm_out << "nop";
 			} else if (!name.empty()) {
                 asm_out << name << " x" << rd << ", x" << rs1 << ", x" << rs2;

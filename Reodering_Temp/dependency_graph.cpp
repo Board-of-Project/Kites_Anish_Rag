@@ -123,6 +123,38 @@ int Read_File(std::vector<struct Instruction_Node *>& Instructions, std::string 
     return 0;
 }
 
+void Read_File_for_branch(std::vector <std::vector <struct Instruction_Node*> >& Instruction_blocks, std::string input_filename){
+    std::ifstream hexFile(input_filename);
+    if (!hexFile.is_open()) {
+        std::cerr << "Error: Could not open the hex file!" << std::endl;
+    }
+	
+	std::vector <struct Instruction_Node*> curr_block;
+	struct Instruction_Node* curr_instr;
+    std::string line;
+    int index=0;
+    // read the file line by line
+    while (std::getline(hexFile, line)) {
+        if (line.empty()) continue;
+        std::string Instruction=line.substr(2,8);
+		curr_instr = Instruction_Decode(Instruction,index);
+
+		// if branch and block size>0, push the block without the branch instruction
+		if (curr_instr->Type==type::branch && curr_block.size()) {
+			Instruction_blocks.push_back(curr_block);
+			curr_block.clear();
+		}
+
+		curr_block.push_back(curr_instr);
+        index+=1;
+    }
+	if (curr_block.size()) Instruction_blocks.push_back(curr_block);
+
+    // Always close the stream
+    hexFile.close();
+    //making graph
+}
+
 
 // sources and destination table with 32 entries for each reg, stores instruction idx
 void Make_Graph(std::vector<struct Instruction_Node *>& Instructions,std::vector<std::map<int,int> >&sources,std::vector<std::map<int,int> >&destination){

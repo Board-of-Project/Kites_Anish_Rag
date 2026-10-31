@@ -87,50 +87,61 @@ void Update_Children(
 }
 
 // schedules the instructions and stores in the array passed
-void Scheduler(std::vector<int>&Final_Instructions){
-    std::vector<struct Instruction_Node *> Instructions;
-    Read_File(Instructions);
+void Scheduler(std::vector<int>&Final_Instructions, std::string input_filename) {
+    // std::vector<struct Instruction_Node *> Instructions;
+    // Read_File(Instructions);
+	std::vector <std::vector <struct Instruction_Node*>> Instruction_blocks;
+	Read_File_for_branch(Instruction_blocks, input_filename);
 
 	// prints the number of hazards
-	Num_Hazards(Instructions);
+	Num_Hazards(Instruction_blocks);
+	int Executed_Including_NOP=0;
+	for (std::vector <struct Instruction_Node*> Instructions: Instruction_blocks) {
+		
+		// check if the first instruction is branch
+		if (Instructions[0]->Type==type::branch) {
+			Final_Instructions.push_back(Instructions[0]->idx);
+			Instructions.erase(Instructions.begin());
+		}
+		
+		std::vector<std::map<int,int>> sources(32);
+		std::vector<std::map<int,int>> destinations(32);
+		Make_Graph(Instructions,sources,destinations);
 
-    std::vector<std::map<int,int> >sources(32);
-    std::vector<std::map<int,int> >destinations(32);
-    Make_Graph(Instructions,sources,destinations);
+		//Heuristic of choice
+    	Heuristic2(Instructions,sources,destinations);
 
-    //Heuristic of choice
-    Heuristic2(Instructions,sources,destinations);
+		std::priority_queue<struct Instruction_Node *,std::vector<struct Instruction_Node *>,Compare_Instructions> Priority_List;
+		std::vector<struct Instruction_Node *> Wait_List;
+		Initialize(Priority_List,Instructions,sources,destinations);
+		int Executed=0;
+		int N=Instructions.size();
 
-    std::priority_queue<struct Instruction_Node *,std::vector<struct Instruction_Node *>,Compare_Instructions> Priority_List;
-    std::vector<struct Instruction_Node *> Wait_List;
-    Initialize(Priority_List,Instructions,sources,destinations);
-    int Executed_Including_NOP=0;
-    int Executed=0;
-    int N=Instructions.size();
-    while(Executed<N){
-        Executed_Including_NOP+=1;
-        if(!Priority_List.empty()){
-            Executed+=1;
-            struct Instruction_Node * I=Priority_List.top();
-            Final_Instructions.push_back(I->idx);
-            Priority_List.pop(); // pluck an instruction
-
-            if(I->s1!=-1){sources[I->s1].erase(I->idx);}
-            if(I->s2!=-1){sources[I->s2].erase(I->idx);}
-            if(I->d!=-1){destinations[I->d].erase(I->idx);}
-
-            Update_Children(Instructions,sources,destinations,Wait_List,I,Executed_Including_NOP);
-        }
-        else{
-            Final_Instructions.push_back(-1);
-        }
-        // Pushing ready ones from waitlist into prority queue
-        for(int i=0;i<Wait_List.size();i+=1){
-            struct Instruction_Node *I=Wait_List[i];
-            if(I->expected_index<=Executed_Including_NOP){
-                Priority_List.push(I);
-                Wait_List.erase(Wait_List.begin()+i);
-            }
-        }
-    }
+		while(Executed<N){
+			Executed_Including_NOP+=1;
+			if(!Priority_List.empty()){
+				Executed+=1;
+				struct Instruction_Node * I=Priority_List.top();
+				Final_Instructions.push_back(I->idx);
+				Priority_List.pop(); // pluck an instruction
+				std::cout<<"Executed "<<I->idx<<"\n";
+				if(I->s1!=-1){sources[I->s1].erase(I->idx);}
+				if(I->s2!=-1){sources[I->s2].erase(I->idx);}
+				if(I->d!=-1){destinations[I->d].erase(I->idx);}
+				
+				Update_Children(Instructions,sources,destinations,Wait_List,I,Executed_Including_NOP);
+			}
+			else{
+				Final_Instructions.push_back(-1);
+			}
+			// Pushing ready ones from waitlist into prority queue
+			for(int i=0;i<Wait_List.size();i+=1){
+				struct Instruction_Node *I=Wait_List[i];
+				if(I->expected_index<=Executed_Including_NOP){
+					Priority_List.push(I);
+					Wait_List.erase(Wait_List.begin()+i);
+				}
+			}
+		}
+	}
 }

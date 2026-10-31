@@ -43,6 +43,7 @@ struct Compare_Instructions {
 // Function declarations
 struct Instruction_Node* Instruction_Decode(std::string hexcode, int index);
 int Read_File(std::vector<struct Instruction_Node*>& Instructions, std::string input_filename="instructions.hex");
+void Read_File_for_branch(std::vector <std::vector <struct Instruction_Node*> >& Instruction_blocks, std::string input_filename="instructions.hex");
 void Make_Graph(std::vector<struct Instruction_Node*>& Instructions, 
                 std::vector<std::map<int,int>>& soruces, 
                std::vector<std::map<int,int>>& destination);

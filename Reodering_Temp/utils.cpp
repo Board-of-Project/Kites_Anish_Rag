@@ -11,7 +11,13 @@ int Nops_Needed(struct Instruction_Node * &I1,struct Instruction_Node * &I2){
 }
 
 // counts the number of nops to be added
-void Num_Hazards(std::vector<struct Instruction_Node*>& Instructions) {
+void Num_Hazards(std::vector <std::vector <struct Instruction_Node*>>& Instruction_blocks) {
+	// flattening
+	std::vector<struct Instruction_Node*> Instructions;
+	for (auto& block: Instruction_blocks) {
+		Instructions.insert(Instructions.end(), block.begin(), block.end());
+	}
+	
 	int range=2; // the range of influence to check, current set to 2
 	int n=Instructions.size();
 	int hazards=0;

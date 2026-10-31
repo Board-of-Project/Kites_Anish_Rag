@@ -25,6 +25,6 @@ void Update_Children(
     struct Instruction_Node *I,
     int Executed_Including_Nop
 );
-void Scheduler(std::vector<int>&Final_Instructions);
+void Scheduler(std::vector<int>&Final_Instructions, std::string input_filename="instructions.hex");
 
 #endif

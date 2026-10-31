@@ -11,11 +11,11 @@
 
 
 // call the main function
-void reorder() {
+void reorder(std::string input_filename) {
     std::vector<int> finalorder;
     std::vector<std::string> temp;
-    Scheduler(finalorder);
-    hex_to_array(temp);
+    Scheduler(finalorder, input_filename);
+    hex_to_array(temp, input_filename);
     std::vector<std::string> Final;
     std::string NOP="0x00000033";
     for(int i:finalorder){
@@ -30,7 +30,7 @@ void reorder() {
 }
 
 int main() {
-    reorder();
+    reorder("instructions2.hex");
     return 0;
 }
 

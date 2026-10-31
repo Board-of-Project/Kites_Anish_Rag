@@ -1,9 +1,9 @@
-#include "reoder.h"
-#include "ListScheduler.h"
-#include "graphmaker.h"
+#include "translator.h"
+#include "scheduler.h"
+#include "dependency_graph.h"
 #include <iostream>
 
 int main(){
-    Reoderer();
+    // reorder();
     return 0;
 }
