@@ -1,5 +1,5 @@
-#include "graphmaker.h"
-#include "Heuristic.h"
+#include "dependency_graph.h"
+#include "heuristic.h"
 #include <vector>
 #include <map>
 #include <algorithm>
@@ -38,5 +38,16 @@ void Heuristic1(
     std::vector<int> Dependecies(n,-1);
     for(int i=0;i<Instructions.size();i+=1){
         Instructions[i]->priority=Subtree(Dependecies,Instructions,sources,destinations,i);
+    }
+}
+
+void Heuristic2(
+    std::vector<struct Instruction_Node *> &Instructions,
+    std::vector<std::map<int,int> >&sources,
+    std::vector<std::map<int,int> >&destinations
+){
+    int n=Instructions.size();
+    for(int i=0;i<Instructions.size();i+=1){
+        Instructions[i]->priority=n-(Instructions[i]->idx);
     }
 }

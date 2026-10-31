@@ -1,15 +1,18 @@
-#ifndef GRAPHMAKER_H
-#define GRAPHMAKER_H
+#ifndef DEPENDENCY_GRAPH_H
+#define DEPENDENCY_GRAPH_H
 
 #include <string>
 #include <vector>
 #include <map>
 
+enum class type {R, ld, sd, branch, misc, I};
+
 struct Instruction_Node {
     int s1;
     int s2;
     int d;
-    int type; // 0 if R, 1 if I, 2 if ld/sd, 3 if branch 
+	// type currently unused
+    type Type; // 0 if R, 1 if I, 2 if ld, 3 if sd, 3 if branch, 4 jal and jalr, 5 misc
     int idx;
     int priority;
     int expected_index;
@@ -39,7 +42,7 @@ struct Compare_Instructions {
 
 // Function declarations
 struct Instruction_Node* Instruction_Decode(std::string hexcode, int index);
-int Read_File(std::vector<struct Instruction_Node*>& Instructions);
+int Read_File(std::vector<struct Instruction_Node*>& Instructions, std::string input_filename="instructions.hex");
 void Make_Graph(std::vector<struct Instruction_Node*>& Instructions, 
                 std::vector<std::map<int,int>>& soruces, 
                std::vector<std::map<int,int>>& destination);

@@ -1,4 +1,5 @@
-#include "graphmaker.h"
+#include "dependency_graph.h"
+#include "utils.h"
 #include <algorithm>
 #include <fstream>
 #include <vector>
@@ -8,15 +9,21 @@
 #include <cstdint>
 #include <map>
 
+/*This file makes node of instructions from hex file and creates sources/destination table*/
+
+// returns instruction node given its hex
 struct Instruction_Node * Instruction_Decode(std::string hexcode,int index) {
     uint32_t instr = std::stoul(hexcode, nullptr, 16);
 
     int opcode = instr & 0x7F;
 
+	// by default -1
     int rd  = -1;
-    int  rs1 = -1;
+    int rs1 = -1;
     int rs2 = -1;
+	type Type;
 
+	// identifying registers
     switch (opcode) {
         // R-type: add, sub, and, or, xor, sll, srl, etc.
         case 0x33:
@@ -25,43 +32,57 @@ struct Instruction_Node * Instruction_Decode(std::string hexcode,int index) {
             rd  = (instr >> 7)  & 0x1F;
             rs1 = (instr >> 15) & 0x1F;
             rs2 = (instr >> 20) & 0x1F;
+			Type = type::R;
             break;
 
-        // I-type: loads, immediate arithmetic, jalr
-        case 0x03:
+		// loads
+		case 0x03:
+			rd  = (instr >> 7)  & 0x1F;
+            rs1 = (instr >> 15) & 0x1F;
+			Type = type::ld;
+			break;
+
+        // I-type: immediate arithmetic
         case 0x13:
-        case 0x67:
             rd  = (instr >> 7)  & 0x1F;
             rs1 = (instr >> 15) & 0x1F;
+			Type = type::I;
             break;
 
         // S-type: stores
         case 0x23:
             rs1 = (instr >> 15) & 0x1F;
             rs2 = (instr >> 20) & 0x1F;
+			Type = type::sd;
             break;
 
         // B-type: branches
         case 0x63:
             rs1 = (instr >> 15) & 0x1F;
             rs2 = (instr >> 20) & 0x1F;
+			Type = type::branch;
             break;
 
         // U-type: lui, auipc
         case 0x37:
         case 0x17:
             rd = (instr >> 7) & 0x1F;
+			Type = type::misc;
             break;
 
-        // J-type: jal
+        // jal, jalr
+		case 0x67:
         case 0x6F:
             rd = (instr >> 7) & 0x1F;
+			Type = type::branch;
             break;
 
         // Other instructions: registers remain -1
         default:
             break;
     }
+
+	// ignore x0
     if(rd==0){rd=-1;}
     if(rs1==0){rs1=-1;}
     if(rs2==0){rs2=-1;}
@@ -69,12 +90,14 @@ struct Instruction_Node * Instruction_Decode(std::string hexcode,int index) {
     N->d=rd;
     N->s1=rs1;
     N->s2=rs2;
+	N->Type=Type;
     N->idx=index;
     return N;
 }
 
-int Read_File(std::vector<struct Instruction_Node *>& Instructions){
-    std::ifstream hexFile("instructions.hex"); 
+// reads a given file and stores all instruction nodes in an array
+int Read_File(std::vector<struct Instruction_Node *>& Instructions, std::string input_filename){
+    std::ifstream hexFile(input_filename);
     if (!hexFile.is_open()) {
         std::cerr << "Error: Could not open the hex file!" << std::endl;
         return 1;
@@ -83,7 +106,7 @@ int Read_File(std::vector<struct Instruction_Node *>& Instructions){
     std::string line;
     int lineCount = 0;
     int index=0;
-    // 2. Read the file line by line
+    // read the file line by line
     while (std::getline(hexFile, line)) {
         lineCount++;
 
@@ -100,13 +123,15 @@ int Read_File(std::vector<struct Instruction_Node *>& Instructions){
     return 0;
 }
 
-void Make_Graph(std::vector<struct Instruction_Node *>& Instructions,std::vector<std::map<int,int> >&soruces,std::vector<std::map<int,int> >&destination){
+
+// sources and destination table with 32 entries for each reg, stores instruction idx
+void Make_Graph(std::vector<struct Instruction_Node *>& Instructions,std::vector<std::map<int,int> >&sources,std::vector<std::map<int,int> >&destination){
     for(struct Instruction_Node *N:Instructions){
         if(N->s1!=-1){
-            soruces[(N->s1)].insert({N->idx,N->idx});
+            sources[(N->s1)].insert({N->idx,N->idx});
         }
         if(N->s2!=-1){
-            soruces[(N->s2)].insert({N->idx,N->idx});
+            sources[(N->s2)].insert({N->idx,N->idx});
         }
         if(N->d!=-1){
             destination[(N->d)].insert({N->idx,N->idx});

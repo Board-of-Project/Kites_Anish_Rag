@@ -4,10 +4,10 @@ CXX = g++
 CXXFLAGS = -std=c++17 -Wall -Wextra -g -MMD -MP
 
 # Target executable name
-TARGET = tester
+TARGET = main
 
 # List of all source files
-SRCS = tester.cpp graphmaker.cpp Heuristic.cpp ListScheduler.cpp reoder.cpp
+SRCS = main.cpp dependency_graph.cpp heuristic.cpp scheduler.cpp translator.cpp utils.cpp
 
 # Generate object (.o) and dependency (.d) file lists
 OBJS = $(SRCS:.cpp=.o)

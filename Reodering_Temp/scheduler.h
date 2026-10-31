@@ -1,13 +1,12 @@
-#ifndef LISTSCHEDULER_H
-#define LISTSCHEDULER_H
+#ifndef SCHEDULER_H
+#define SCHEDULER_H
 
-#include "graphmaker.h"
+#include "dependency_graph.h"
 #include <string>
 #include <vector>
 #include <map>
 #include <queue>
 
-int Nops_Needed(struct Instruction_Node * &I1,struct Instruction_Node * &I2);
 bool Check_Dependecy(
     std::vector<std::map<int,int> >&sources,
     std::vector<std::map<int,int> >&destinations,
