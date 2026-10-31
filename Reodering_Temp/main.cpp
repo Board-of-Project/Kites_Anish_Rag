@@ -30,7 +30,7 @@ void reorder(std::string input_filename) {
 }
 
 int main() {
-    reorder("instructions2.hex");
+    reorder("instructions.hex");
     return 0;
 }
 

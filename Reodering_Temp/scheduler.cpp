@@ -92,18 +92,25 @@ void Scheduler(std::vector<int>&Final_Instructions, std::string input_filename) 
     // Read_File(Instructions);
 	std::vector <std::vector <struct Instruction_Node*>> Instruction_blocks;
 	Read_File_for_branch(Instruction_blocks, input_filename);
-
 	// prints the number of hazards
 	Num_Hazards(Instruction_blocks);
 	int Executed_Including_NOP=0;
 	for (std::vector <struct Instruction_Node*> Instructions: Instruction_blocks) {
-		
+		if(Instructions.size()==0){
+            continue;
+        }
 		// check if the first instruction is branch
 		if (Instructions[0]->Type==type::branch) {
 			Final_Instructions.push_back(Instructions[0]->idx);
 			Instructions.erase(Instructions.begin());
 		}
-		
+		if(Instructions.size()==0){
+            continue;
+        }
+        int index1=Instructions[0]->idx;
+        for(struct Instruction_Node * I:Instructions){
+            I->idx=I->idx-index1;
+        }
 		std::vector<std::map<int,int>> sources(32);
 		std::vector<std::map<int,int>> destinations(32);
 		Make_Graph(Instructions,sources,destinations);
@@ -116,15 +123,14 @@ void Scheduler(std::vector<int>&Final_Instructions, std::string input_filename) 
 		Initialize(Priority_List,Instructions,sources,destinations);
 		int Executed=0;
 		int N=Instructions.size();
-
 		while(Executed<N){
 			Executed_Including_NOP+=1;
 			if(!Priority_List.empty()){
 				Executed+=1;
 				struct Instruction_Node * I=Priority_List.top();
-				Final_Instructions.push_back(I->idx);
+				Final_Instructions.push_back(I->idx+index1);
 				Priority_List.pop(); // pluck an instruction
-				std::cout<<"Executed "<<I->idx<<"\n";
+				std::cout<<"Executed "<<I->idx+index1<<"\n";
 				if(I->s1!=-1){sources[I->s1].erase(I->idx);}
 				if(I->s2!=-1){sources[I->s2].erase(I->idx);}
 				if(I->d!=-1){destinations[I->d].erase(I->idx);}
