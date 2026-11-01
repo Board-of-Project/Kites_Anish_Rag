@@ -13,6 +13,8 @@ struct Instruction_Node {
     int d;
 	// type currently unused
     type Type; // 0 if R, 1 if I, 2 if ld, 3 if sd, 3 if branch, 4 jal and jalr, 5 misc
+    int branch_flag;
+    int branch_jump;
     int idx;
     int priority;
     int expected_index;

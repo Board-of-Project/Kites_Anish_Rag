@@ -30,9 +30,8 @@ void hex_to_array(std::vector<std::string> &S, std::string input_filename){
     hexFile.close();
 
 }
-
-// hex to text
 // Sign-extend the low `bits` bits of `value`
+//hex to text
 static inline int32_t sext(uint32_t value, int bits) {
     uint32_t m = 1u << (bits - 1);
     return static_cast<int32_t>((value ^ m) - m);
@@ -65,7 +64,7 @@ std::string hex_to_text(uint32_t instr) {
                 case 0x7: name = "and";  break;
             }
         } else if (funct7 == 0x20) {
-            if (funct3 == 0x0) name = "sub";
+            if (funct3 == 0x0)      name = "sub";
             else if (funct3 == 0x5) name = "sra";
         } else if (funct7 == 0x01) { // M extension
             switch (funct3) {
@@ -89,8 +88,9 @@ std::string hex_to_text(uint32_t instr) {
 
     // ---------------- I-type ALU ----------------
     case 0x13: {
-        int32_t imm = static_cast<int32_t>(instr) >> 20;
-        uint32_t shamt = (instr >> 20) & 0x1F;
+        int32_t  imm    = static_cast<int32_t>(instr) >> 20;
+        uint32_t shamt  = (instr >> 20) & 0x3F;   // RV64: 6-bit shift amount
+        uint32_t funct6 = (instr >> 26) & 0x3F;   // RV64: upper 6 bits
         std::string name;
         bool is_shift = false;
 
@@ -102,11 +102,11 @@ std::string hex_to_text(uint32_t instr) {
             case 0x6: name = "ori";   break;
             case 0x7: name = "andi";  break;
             case 0x1:
-                if (funct7 == 0x00) { name = "slli"; is_shift = true; }
+                if (funct6 == 0x00) { name = "slli"; is_shift = true; }
                 break;
             case 0x5:
-                if (funct7 == 0x00)      { name = "srli"; is_shift = true; }
-                else if (funct7 == 0x20) { name = "srai"; is_shift = true; }
+                if (funct6 == 0x00)      { name = "srli"; is_shift = true; }
+                else if (funct6 == 0x10) { name = "srai"; is_shift = true; }
                 break;
         }
 
@@ -126,8 +126,10 @@ std::string hex_to_text(uint32_t instr) {
             case 0x0: name = "lb";  break;
             case 0x1: name = "lh";  break;
             case 0x2: name = "lw";  break;
+            case 0x3: name = "ld";  break;   // RV64
             case 0x4: name = "lbu"; break;
             case 0x5: name = "lhu"; break;
+            case 0x6: name = "lwu"; break;   // RV64
         }
         if (!name.empty())
             out << name << " x" << rd << ", " << imm << "(x" << rs1 << ")";
@@ -144,6 +146,7 @@ std::string hex_to_text(uint32_t instr) {
             case 0x0: name = "sb"; break;
             case 0x1: name = "sh"; break;
             case 0x2: name = "sw"; break;
+            case 0x3: name = "sd"; break;    // RV64
         }
         if (!name.empty())
             out << name << " x" << rs2 << ", " << imm << "(x" << rs1 << ")";
@@ -212,9 +215,9 @@ std::string hex_to_text(uint32_t instr) {
     // ---------------- SYSTEM ----------------
     case 0x73: {
         uint32_t imm12 = instr >> 20;
-        if (funct3 == 0x0 && imm12 == 0x0)      out << "ecall";
-        else if (funct3 == 0x0 && imm12 == 0x1) out << "ebreak";
-        else                                    out << "unknown_system";
+        if (funct3 == 0x0 && rd == 0 && rs1 == 0 && imm12 == 0x0)      out << "ecall";
+        else if (funct3 == 0x0 && rd == 0 && rs1 == 0 && imm12 == 0x1) out << "ebreak";
+        else                                                           out << "unknown_system";
         break;
     }
 

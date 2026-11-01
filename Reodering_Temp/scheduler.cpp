@@ -116,7 +116,7 @@ void Scheduler(std::vector<int>&Final_Instructions, std::string input_filename) 
 		Make_Graph(Instructions,sources,destinations);
 
 		//Heuristic of choice
-    	Heuristic2(Instructions,sources,destinations);
+    	Heuristic1(Instructions,sources,destinations);
 
 		std::priority_queue<struct Instruction_Node *,std::vector<struct Instruction_Node *>,Compare_Instructions> Priority_List;
 		std::vector<struct Instruction_Node *> Wait_List;
@@ -130,7 +130,7 @@ void Scheduler(std::vector<int>&Final_Instructions, std::string input_filename) 
 				struct Instruction_Node * I=Priority_List.top();
 				Final_Instructions.push_back(I->idx+index1);
 				Priority_List.pop(); // pluck an instruction
-				std::cout<<"Executed "<<I->idx+index1<<"\n";
+				std::cout<<"Executed "<<I->idx+index1+1<<"\n";
 				if(I->s1!=-1){sources[I->s1].erase(I->idx);}
 				if(I->s2!=-1){sources[I->s2].erase(I->idx);}
 				if(I->d!=-1){destinations[I->d].erase(I->idx);}
