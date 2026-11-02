@@ -163,7 +163,7 @@ int Read_File(std::vector<struct Instruction_Node *>& Instructions, std::string 
 void Read_File_for_branch(std::vector <std::vector <struct Instruction_Node*> >& Instruction_blocks, std::string input_filename){
     std::ifstream hexFile(input_filename);
     if (!hexFile.is_open()) {
-        std::cerr << "Error: Could not open the hex file!" << std::endl;
+        std::cerr << "Error: Could not open the hex file_1!" << std::endl;
     }
 	
 	std::vector <struct Instruction_Node*> Total_Instructions;;
@@ -198,7 +198,6 @@ void Read_File_for_branch(std::vector <std::vector <struct Instruction_Node*> >&
 	if (curr_block.size()) Instruction_blocks.push_back(curr_block);
 
 }
-
 
 // sources and destination table with 32 entries for each reg, stores instruction idx
 void Make_Graph(std::vector<struct Instruction_Node *>& Instructions,std::vector<std::map<int,int> >&sources,std::vector<std::map<int,int> >&destination){

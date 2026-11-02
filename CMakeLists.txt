@@ -17,7 +17,7 @@ find_package(Qt6 6.9.2 REQUIRED COMPONENTS Core Widgets Network Concurrent)
 # tests
 option(ENABLE_TESTS "Build tests" OFF)
 option(LOG_PANEL "Enable LogPanel mode" OFF) # will enable log_panel
-option(DISABLE_GUI "Disable GUI components" OFF) # will disable GUI components
+option(DISABLE_GUI "Disable GUI components" ON) # will disable GUI components
 qt_standard_project_setup()
 
 set(CMAKE_AUTOMOC ON)

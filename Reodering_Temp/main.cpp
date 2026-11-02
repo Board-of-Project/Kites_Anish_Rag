@@ -22,12 +22,15 @@ void reorder(std::string input_filename) {
         if(i>=0){
             Final.push_back(temp[i]);
         }
+		// else {
+		// 	Final.push_back(NOP);
+		// }
     }
     write_to_file(Final);
 }
 
 int main() {
-    reorder("../build/instructions.hex");
+    reorder("instructions.hex");
     return 0;
 }
 

@@ -80,7 +80,7 @@ std::string hex_to_text(uint32_t instr) {
         }
 
         if (!name.empty())
-            out << name << " x" << rd << ", x" << rs1 << ", x" << rs2;
+			out << name << " x" << rd << ", x" << rs1 << ", x" << rs2;
         else
             out << "unknown_r_type";
         break;
