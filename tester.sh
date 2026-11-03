@@ -27,6 +27,9 @@
 #   CODE1/CODE2 generated / reordered file           default /tmp/comp_arch/tests/code1.s, code2.s
 #   FAIL_DIR    where failing programs are stored    default /tmp/comp_arch/fail
 #   WORK_DIR    scratch copies of each run's output  default /tmp/comp_arch/work
+#   CYCLES1/2   files kites-cli writes its cycle count to (--OUTFILECYCLES), run 1 / run 2
+#               default /tmp/comp_arch/cycles1.txt, /tmp/comp_arch/cycles2.txt
+#               (emptied once at script start, then appended to by every run)
 #   VM          only if set, adds "--vm $VM" to both Kites runs     default: not passed
 #   ITER_LEN    instructions per random program      default: generator picks a random 10..15
 #   SEED        base seed; iteration i uses SEED+i   default random
@@ -38,16 +41,20 @@
 set -u
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ITERATIONS="${1:-10000}"
+ITERATIONS="${1:-530}"
 KITES="${KITES:-./build/kites-cli}"
 GEN="${GEN:-./rand_gen}"
+COMB="${COMB:-./data_collector}"
 GEN_CMD="${GEN_CMD:-}"
+COMB_CMD="${COMB_CMD:-}"
 REORDER="${REORDER:-./Reodering_Temp/main}"
 CODE1="${CODE1:-/tmp/comp_arch/tests/code1.s}"
 CODE2="${CODE2:-/tmp/comp_arch/tests/code2.s}"
 FAIL_DIR="${FAIL_DIR:-/tmp/comp_arch/fail}"
 WORK_DIR="${WORK_DIR:-/tmp/comp_arch/work}"
-VM="${VM:-}"
+CYCLES1="${CYCLES1:-/tmp/comp_arch/cycles1.txt}"
+CYCLES2="${CYCLES2:-/tmp/comp_arch/cycles2.txt}"
+VM="${VM:-rv5-h-nf}"
 ITER_LEN="${ITER_LEN:-20}"
 TIMEOUT="${TIMEOUT:-0}"
 STOP_ON_FAIL="${STOP_ON_FAIL:-0}"
@@ -83,15 +90,15 @@ for tool in "${tools[@]}"; do
     if [ ! -x "$tool" ]; then echo "error: '$tool' not found or not executable (run from the repo root)" >&2; exit 2; fi
 done
 
-mkdir -p "$(dirname "$CODE1")" "$(dirname "$CODE2")" "$FAIL_DIR" "$WORK_DIR" || exit 2
+mkdir -p "$(dirname "$CODE1")" "$(dirname "$CODE2")" "$FAIL_DIR" "$WORK_DIR" "$(dirname "$CYCLES1")" "$(dirname "$CYCLES2")" || exit 2
 RUN1="$WORK_DIR/run1"; RUN2="$WORK_DIR/run2"
 
-# run_kites <asm> <save_dir>
-# Runs exactly:  <KITES> <asm> [--vm $VM]    from the current directory, then copies the
+# run_kites <asm> <save_dir> <cycles_file>
+# Runs exactly:  <KITES> <asm> --OUTFILECYCLES <cycles_file> [--vm $VM]    from the current directory, then copies the
 # results it left behind into <save_dir> so the next run can't overwrite them.
 run_kites() {
-    local asm="$1" dir="$2"
-    local cmd=("$KITES" "$asm")
+    local asm="$1" dir="$2" cyc="$3"
+    local cmd=("$KITES" "$asm" --OUTFILECYCLES "$cyc")
     [ -n "$VM" ] && cmd+=(--vm "$VM")
     rm -rf "$dir"; mkdir -p "$dir"
     rm -f "$VM_STATE_DIR/registers_dump.json" "$VM_STATE_DIR/memory_dump.json"   # no stale dumps
@@ -103,6 +110,7 @@ run_kites() {
     cp "$VM_STATE_DIR/registers_dump.json" "$dir/regs.json" 2>/dev/null || : > "$dir/regs.json"
 }
 
+: > "$CYCLES1"; : > "$CYCLES2"   # start empty once; kites-cli appends one line per run
 pass=0; fail=0
 echo "base seed $SEED | $ITERATIONS iteration(s) | ${ITER_LEN:-random 10-15} instr | vm=${VM:-default}"
 echo "code1: $CODE1   code2: $CODE2   failures: $FAIL_DIR"
@@ -129,7 +137,7 @@ for ((i = 0; i < ITERATIONS; i++)); do
 
     # 2. kites on code1
     if [ -z "$reason" ]; then
-        run_kites "$CODE1" "$RUN1"
+        run_kites "$CODE1" "$RUN1" "$CYCLES1"
         rc1=$(cat "$RUN1/rc")
         if [ "$rc1" -ne 0 ]; then
             reason="kites_error_on_code1"
@@ -153,7 +161,7 @@ $(tail -n 5 "$WORK_DIR/reorder.stderr")"
 
     # 4. kites on code2
     if [ -z "$reason" ]; then
-        run_kites "$CODE2" "$RUN2"
+        run_kites "$CODE2" "$RUN2" "$CYCLES2"
         rc2=$(cat "$RUN2/rc")
         if [ "$rc2" -ne 0 ]; then
             reason="kites_error_on_code2"
@@ -198,4 +206,11 @@ done
 
 echo
 echo "done: $pass passed, $fail failed (failing programs in $FAIL_DIR)"
+if [ -z "$COMB_CMD" ] && [ ! -x "$COMB" ] && [ -f "$SCRIPT_DIR/data_collector.cpp" ]; then
+    echo "building generator from $SCRIPT_DIR/data_collector.cpp -> $COMB"
+    g++ -std=c++20 -O2 "$SCRIPT_DIR/data_collector.cpp" -o "$COMB" || { echo "\combiner build failed" >&2; exit 2; }
+fi
+"$COMB"
+echo "data stored in /tmp/comp_arch/data.csv"
+
 [ "$fail" -eq 0 ]

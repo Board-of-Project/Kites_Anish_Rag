@@ -19,6 +19,9 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <fstream>
+#include <sstream>
+#include <cstdint>
 
 namespace
 {
@@ -53,10 +56,10 @@ int main(int argc, char *argv[])
     Kites::setupVmStateDirectory();
 
     std::string assemblyFile;
-    std::string processorTypeStr = "rvss";
+    std::string processorTypeStr = "rv5-h-nf";
     std::vector<std::string> memDumpArgs;
     bool replRequested = false;
-
+    std::string outfilecycles="/tmp/cycles.txt";
     for (int i = 1; i < argc; ++i)
     {
         std::string arg = argv[i];
@@ -84,6 +87,13 @@ int main(int argc, char *argv[])
         else if (arg == "--repl" || arg == "-i")
         {
             replRequested = true;
+        }
+        else if(arg=="--OUTFILECYCLES"){
+          if(i+1>=argc){std::cerr<<"Error need output file";}
+          else{
+            outfilecycles=argv[++i];
+            
+          }
         }
         else if (!arg.empty() && arg[0] == '-')
         {
@@ -165,7 +175,7 @@ int main(int argc, char *argv[])
     // program takes N seconds to run.
     manager.setStepDelay(0);
     manager.loadProgram(program);
-
+    manager.setBreakpoints({});  
     // Known limitation: a program hitting a blocking read syscall will hang here
     // forever, since nothing in this CLI feeds terminal stdin into the VM's input
     // queue yet (that's separate, future work).
@@ -201,6 +211,10 @@ int main(int argc, char *argv[])
     {
         std::cout << "\nMemory      -> " << Kites::globals::memory_dump_file_path.string();
     }
+    std::ofstream outfile(outfilecycles,std::ios::app);
+    outfile<<"Cycles :"<<manager.getCycles()<<" IPC "<<manager.getIPC()<<"\n";
+	outfile.close();
+    //std::cout<<"Cycles "<<Kites::ProcessorManager getCycles();
     std::cout << std::endl;
 
     return runFailed ? 2 : 0;
