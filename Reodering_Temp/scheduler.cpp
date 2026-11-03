@@ -12,7 +12,7 @@
 
 //check overlap
 bool overlap(int h1,int h2,int l1,int l2){
-    return (l1>h2||l2>h1);
+    return !(l1>h2||l2>h1);
 }
 //check if free
 bool Check_Dependecy(
