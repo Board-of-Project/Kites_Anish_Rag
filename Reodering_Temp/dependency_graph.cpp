@@ -22,13 +22,14 @@ struct Instruction_Node * Instruction_Decode(std::string hexcode, int index) {
     uint32_t instr = std::stoul(hexcode, nullptr, 16);
 
     int opcode = instr & 0x7F;
-
+    int imm=0;
     // by default -1
     int rd  = -1;
     int rs1 = -1;
     int rs2 = -1;
     type Type = type::misc;      // default so it's never uninitialized
-
+    int funct3 = (instr >> 12) & 7;
+    int sz = (funct3 & 3) == 0 ? 1 : (funct3 & 3) == 1 ? 2 : (funct3 & 3) == 2 ? 4 : 8;
     int branch_flag = 0;
     int branch_jump = 0;
 
@@ -47,6 +48,7 @@ struct Instruction_Node * Instruction_Decode(std::string hexcode, int index) {
         case 0x03:
             rd  = (instr >> 7)  & 0x1F;
             rs1 = (instr >> 15) & 0x1F;
+            imm=sign_extend(instr >> 20, 12);
             Type = type::ld;
             break;
 
@@ -62,6 +64,7 @@ struct Instruction_Node * Instruction_Decode(std::string hexcode, int index) {
             rs1 = (instr >> 15) & 0x1F;
             rs2 = (instr >> 20) & 0x1F;
             Type = type::sd;
+            imm= sign_extend(((instr >> 25) << 5) | ((instr >> 7) & 0x1F), 12);
             break;
 
         // B-type: conditional branches
@@ -129,6 +132,9 @@ struct Instruction_Node * Instruction_Decode(std::string hexcode, int index) {
     N->idx = index;
     N->branch_flag = branch_flag;
     N->branch_jump = branch_jump;
+    N->imm=imm;
+    N->last_touched_s1=-1;
+    N->size=sz;
     return N;
 }
 
@@ -200,7 +206,9 @@ void Read_File_for_branch(std::vector <std::vector <struct Instruction_Node*> >&
 }
 
 // sources and destination table with 32 entries for each reg, stores instruction idx
-void Make_Graph(std::vector<struct Instruction_Node *>& Instructions,std::vector<std::map<int,int> >&sources,std::vector<std::map<int,int> >&destination){
+void Make_Graph(std::vector<struct Instruction_Node *>& Instructions,std::vector<std::map<int,int> >&sources,std::vector<std::map<int,int> >&destination
+,std::vector<std::map<int,int> >&load_stores
+){
     for(struct Instruction_Node *N:Instructions){
         if(N->s1!=-1){
             sources[(N->s1)].insert({N->idx,N->idx});
@@ -210,6 +218,12 @@ void Make_Graph(std::vector<struct Instruction_Node *>& Instructions,std::vector
         }
         if(N->d!=-1){
             destination[(N->d)].insert({N->idx,N->idx});
+        }
+        if(N->Type==(type::ld)){
+            load_stores[N->s1].insert({N->idx,N->idx});
+        }
+        if(N->Type==(type::sd)){
+            load_stores[N->s1].insert({N->idx,N->idx});
         }
     }
 }

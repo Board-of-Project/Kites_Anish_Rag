@@ -13,7 +13,7 @@
 # If ANY step errors out or the two runs differ, code1.s is saved into the fail folder
 # (together with code2.s and a .log explaining why).
 #
-# Usage:   ./tester.sh [iterations]            (default 1)
+# Usage:   ./tester.sh [iterations]            (default 1000)
 # Example: ITER_LEN=200 ./tester.sh 500
 #
 # Settings (environment variables, all optional):
@@ -28,7 +28,7 @@
 #   FAIL_DIR    where failing programs are stored    default /tmp/comp_arch/fail
 #   WORK_DIR    scratch copies of each run's output  default /tmp/comp_arch/work
 #   VM          only if set, adds "--vm $VM" to both Kites runs     default: not passed
-#   ITER_LEN    instructions per random program      default 10
+#   ITER_LEN    instructions per random program      default: generator picks a random 10..15
 #   SEED        base seed; iteration i uses SEED+i   default random
 #   TIMEOUT     seconds per Kites/reorder run, 0 = no timeout        default 0
 #   STOP_ON_FAIL=1   stop at the first failure
@@ -38,7 +38,7 @@
 set -u
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ITERATIONS="${1:-10}"
+ITERATIONS="${1:-10000}"
 KITES="${KITES:-./build/kites-cli}"
 GEN="${GEN:-./rand_gen}"
 GEN_CMD="${GEN_CMD:-}"
@@ -48,7 +48,7 @@ CODE2="${CODE2:-/tmp/comp_arch/tests/code2.s}"
 FAIL_DIR="${FAIL_DIR:-/tmp/comp_arch/fail}"
 WORK_DIR="${WORK_DIR:-/tmp/comp_arch/work}"
 VM="${VM:-}"
-ITER_LEN="${ITER_LEN:-1}"
+ITER_LEN="${ITER_LEN:-20}"
 TIMEOUT="${TIMEOUT:-0}"
 STOP_ON_FAIL="${STOP_ON_FAIL:-0}"
 SEED="${SEED:-$(( (RANDOM << 15 | RANDOM) ))}"
@@ -104,7 +104,7 @@ run_kites() {
 }
 
 pass=0; fail=0
-echo "base seed $SEED | $ITERATIONS iteration(s) | $ITER_LEN instr | vm=${VM:-default}"
+echo "base seed $SEED | $ITERATIONS iteration(s) | ${ITER_LEN:-random 10-15} instr | vm=${VM:-default}"
 echo "code1: $CODE1   code2: $CODE2   failures: $FAIL_DIR"
 echo
 
@@ -118,7 +118,7 @@ for ((i = 0; i < ITERATIONS; i++)); do
         export SEED_I CODE1 ITER_LEN
         bash -c "$GEN_CMD"
     else
-        "$GEN" "$CODE1" "$SEED_I" "$ITER_LEN"
+        "$GEN" "$CODE1" "$SEED_I" ${ITER_LEN:+"$ITER_LEN"}
     fi
     grc=$?
     if [ $grc -ne 0 ]; then
@@ -182,12 +182,12 @@ ${d_reg:-<identical>}"
         printf '[PASS] #%d seed=%d\n' "$i" "$SEED_I"
     else
         fail=$((fail + 1))
-        base="$FAIL_DIR/fail_seed${SEED_I}_${reason}"
+        base="$FAIL_DIR/test_number_${i}_${reason}"
         cp "$CODE1" "$base.s" 2>/dev/null
         [ -s "$CODE2" ] && cp "$CODE2" "$base.code2.s"
         {
             echo "reason: $reason"
-            echo "seed:   $SEED_I   (regenerate: $GEN out.s $SEED_I $ITER_LEN)"
+            echo "seed:   $SEED_I   (regenerate: $GEN out.s $SEED_I ${ITER_LEN:-})"
             echo "vm:     ${VM:-default}"
             echo "$detail"
         } > "$base.log"

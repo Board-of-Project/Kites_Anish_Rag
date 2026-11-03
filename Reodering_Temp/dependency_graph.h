@@ -11,13 +11,15 @@ struct Instruction_Node {
     int s1;
     int s2;
     int d;
-	// type currently unused
-    type Type; // 0 if R, 1 if I, 2 if ld, 3 if sd, 3 if branch, 4 jal and jalr, 5 misc
+    type Type;
     int branch_flag;
     int branch_jump;
     int idx;
     int priority;
     int expected_index;
+    int imm;
+    int last_touched_s1;
+    int size;
 };
 
 // Custom comparator for pointers
@@ -48,6 +50,8 @@ int Read_File(std::vector<struct Instruction_Node*>& Instructions, std::string i
 void Read_File_for_branch(std::vector <std::vector <struct Instruction_Node*> >& Instruction_blocks, std::string input_filename="instructions.hex");
 void Make_Graph(std::vector<struct Instruction_Node*>& Instructions, 
                 std::vector<std::map<int,int>>& soruces, 
-               std::vector<std::map<int,int>>& destination);
+               std::vector<std::map<int,int>>& destination,
+               std::vector<std::map<int,int>>& load_stores
+            );
 
 #endif

@@ -28,7 +28,7 @@ int Subtree(
         }
     }
 }
-
+//entire subtree
 void Heuristic1(
     std::vector<struct Instruction_Node *> &Instructions,
     std::vector<std::map<int,int> >&sources,
@@ -40,7 +40,7 @@ void Heuristic1(
         Instructions[i]->priority=Subtree(Dependecies,Instructions,sources,destinations,i);
     }
 }
-
+//index
 void Heuristic2(
     std::vector<struct Instruction_Node *> &Instructions,
     std::vector<std::map<int,int> >&sources,

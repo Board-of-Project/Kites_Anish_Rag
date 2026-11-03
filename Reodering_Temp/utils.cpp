@@ -7,6 +7,9 @@ int Nops_Needed(struct Instruction_Node * &I1,struct Instruction_Node * &I2){
     if((I1->d==I2->s1||I1->d==I2->s2) && I1->d!=-1){
         return 2;
     }
+	if((I1->Type==(type::ld)||I1->Type==(type::sd))&&(I2->Type==(type::ld)||I2->Type==(type::sd))){
+		return 2;
+	}
     return 0;
 }
 

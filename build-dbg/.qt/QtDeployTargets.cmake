@@ -1,0 +1,6 @@
+set(__QT_DEPLOY_TARGET_kites_core_FILE /run/media/araghava/Windows-SSD/Academics@IITH/Sem3/CompArch/project/Kites_Anish_Rag/build-dbg/libkites_core.a)
+set(__QT_DEPLOY_TARGET_kites_core_TYPE STATIC_LIBRARY)
+set(__QT_DEPLOY_TARGET_Kites_FILE /run/media/araghava/Windows-SSD/Academics@IITH/Sem3/CompArch/project/Kites_Anish_Rag/build-dbg/Kites)
+set(__QT_DEPLOY_TARGET_Kites_TYPE EXECUTABLE)
+set(__QT_DEPLOY_TARGET_kites_cli_FILE /run/media/araghava/Windows-SSD/Academics@IITH/Sem3/CompArch/project/Kites_Anish_Rag/build-dbg/kites-cli)
+set(__QT_DEPLOY_TARGET_kites_cli_TYPE EXECUTABLE)
