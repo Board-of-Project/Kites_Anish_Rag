@@ -1,5 +1,6 @@
 #include "dependency_graph.h"
 #include "heuristic.h"
+#include "utils.h"
 #include <vector>
 #include <map>
 #include <algorithm>
@@ -13,19 +14,31 @@ int Subtree(
 ){
     if(Dependencies[index]!=-1){return Dependencies[index];}
     else{
-        if(Instructions[index]->d!=-1&&!sources[Instructions[index]->d].empty()){
-            int ans=1;
-            for (auto it = sources[Instructions[index]->d].rbegin(); it !=sources[Instructions[index]->d].rend(); ++it) {
-                if(it->first<=index){Dependencies[index]=ans;return ans;}
-                ans+=Subtree(Dependencies,Instructions,sources,destinations,it->first);
+        int ans=0;
+        for(int i=index+1;i<Instructions.size();i+=1){
+            //waw reg
+            if(Instructions[i]->d()==Instructions[index]->d()&&Instructions[index]->d()!=-1){
+                ans+=Subtree(Dependencies,Instructions,sources,destinations,i)+Nops_Needed(Instructions[index],Instructions[i]);
             }
-            Dependencies[index]=ans;
-            return ans;
+            //war reg
+            else if(Instructions[index]->s1()==Instructions[i]->d()&&Instructions[index]->s1()!=-1){
+                ans+=Subtree(Dependencies,Instructions,sources,destinations,i)+Nops_Needed(Instructions[index],Instructions[i]);
+            }
+            else if(Instructions[index]->s2()==Instructions[i]->d()&&Instructions[index]->s2()!=-1){
+                ans+=Subtree(Dependencies,Instructions,sources,destinations,i)+Nops_Needed(Instructions[index],Instructions[i]);
+            }
+            //raw reg
+            else if((Instructions[index]->d()==Instructions[i]->s1()||Instructions[index]->d()==Instructions[i]->s2())&&Instructions[index]->d()!=-1){
+                ans+=Subtree(Dependencies,Instructions,sources,destinations,i)+Nops_Needed(Instructions[index],Instructions[i]);
+            }
+            else if((Instructions[i]->Type()==(type::ld)||Instructions[i]->Type()==(type::sd))&&(Instructions[index]->Type()==(type::ld)||Instructions[index]->Type()==(type::sd))){
+                if(!(Instructions[index]->s1()==Instructions[i]->s1()&&(!overlap(Instructions[index]->imm()+Instructions[index]->size(),Instructions[i]->imm()+Instructions[i]->size(),Instructions[index]->imm(),Instructions[i]->imm()))&&Instructions[index]->last_touched_s1==Instructions[i]->last_touched_s1)){
+                    ans+=Subtree(Dependencies,Instructions,sources,destinations,i)+Nops_Needed(Instructions[index],Instructions[i]);
+                }
+	        }
         }
-        else{
-            Dependencies[index]=1;
-            return 1;
-        }
+        Dependencies[index]=ans;
+        return ans;
     }
 }
 //entire subtree

@@ -2,12 +2,17 @@
 #include <vector>
 #include <iostream>
 
+
+//check overlap
+bool overlap(int h1,int h2,int l1,int l2){
+    return !(l1>h2||l2>h1);
+}
 // num of nops in between
 int Nops_Needed(struct Instruction_Node * &I1,struct Instruction_Node * &I2){
-    if((I1->d==I2->s1||I1->d==I2->s2) && I1->d!=-1){
+    if((I1->d()==I2->s1()||I1->d()==I2->s2()) && I1->d()!=-1){
         return 2;
     }
-	if((I1->Type==(type::ld)||I1->Type==(type::sd))&&(I2->Type==(type::ld)||I2->Type==(type::sd))){
+	if((I1->Type()==(type::ld)||I1->Type()==(type::sd))&&(I2->Type()==(type::ld)||I2->Type()==(type::sd))){
 		return 2;
 	}
     return 0;

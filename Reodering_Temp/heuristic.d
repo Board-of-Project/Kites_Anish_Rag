@@ -1,3 +1,4 @@
-heuristic.o: heuristic.cpp dependency_graph.h heuristic.h
+heuristic.o: heuristic.cpp dependency_graph.h heuristic.h utils.h
 dependency_graph.h:
 heuristic.h:
+utils.h:

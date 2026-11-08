@@ -41,7 +41,7 @@
 set -u
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ITERATIONS="${1:-530}"
+ITERATIONS="${1:-1000}"
 KITES="${KITES:-./build/kites-cli}"
 GEN="${GEN:-./rand_gen}"
 COMB="${COMB:-./data_collector}"
@@ -55,7 +55,7 @@ WORK_DIR="${WORK_DIR:-/tmp/comp_arch/work}"
 CYCLES1="${CYCLES1:-/tmp/comp_arch/cycles1.txt}"
 CYCLES2="${CYCLES2:-/tmp/comp_arch/cycles2.txt}"
 VM="${VM:-rv5-h-nf}"
-ITER_LEN="${ITER_LEN:-20}"
+ITER_LEN="${ITER_LEN:-200}"
 TIMEOUT="${TIMEOUT:-0}"
 STOP_ON_FAIL="${STOP_ON_FAIL:-0}"
 SEED="${SEED:-$(( (RANDOM << 15 | RANDOM) ))}"
@@ -119,7 +119,7 @@ echo
 for ((i = 0; i < ITERATIONS; i++)); do
     SEED_I=$((SEED + i))
     reason=""; detail=""
-    rm -f "$CODE1" "$CODE2"
+
 
     # 1. generator
     if [ -n "$GEN_CMD" ]; then

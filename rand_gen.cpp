@@ -20,8 +20,8 @@ namespace
 {
 constexpr int BASE_ADDR = 1024;
 constexpr int WINDOW = 256;
-constexpr int MIN_LEN = 10;
-constexpr int MAX_LEN = 30;
+constexpr int MIN_LEN = 50;
+constexpr int MAX_LEN = 100;
 
 const char *BASE_REG = "s11";
 

@@ -10,10 +10,6 @@
 #include <set>
 
 
-//check overlap
-bool overlap(int h1,int h2,int l1,int l2){
-    return !(l1>h2||l2>h1);
-}
 //check if free
 bool Check_Dependecy(
     std::vector<std::map<int,int> >&sources,
@@ -22,54 +18,54 @@ bool Check_Dependecy(
     std::vector<struct Instruction_Node *>&Instructions,
     struct Instruction_Node * I
 ){
-    if(I->Type==(type::ld)){
+    if(I->Type()==(type::ld)){
         //WAR in mem
-        for(const auto & child:load_stores[I->s1]){
+        for(const auto & child:load_stores[I->s1()]){
             int index=child.first;
             if(index>=I->idx){
                 break;
             }
-            if(Instructions[index]->Type==(type::sd)){
+            if(Instructions[index]->Type()==(type::sd)){
                 struct Instruction_Node * I2=Instructions[index];
-                if(!(I->s1==I2->s1&&(!overlap(I->imm+I->size,I2->imm+I2->size,I->imm,I2->imm))&&I->last_touched_s1==I2->last_touched_s1)){
+                if(!(I->s1()==I2->s1()&&(!overlap(I->imm()+I->size(),I2->imm()+I2->size(),I->imm(),I2->imm()))&&I->last_touched_s1==I2->last_touched_s1)){
                     return false;
                 }
             }
         }
     }
-    if(I->Type==(type::sd)){
+    if(I->Type()==(type::sd)){
         //WAW in mem
-        for(const auto & child:load_stores[I->s1]){
+        for(const auto & child:load_stores[I->s1()]){
             int index=child.first;
             if(index>=I->idx){
                 break;
             }
-            if(Instructions[index]->Type==(type::sd)){
+            if(Instructions[index]->Type()==(type::sd)){
                 struct Instruction_Node * I2=Instructions[index];
-                if(!(I->s1==I2->s1&&(!overlap(I->imm+I->size,I2->imm+I2->size,I->imm,I2->imm))&&I->last_touched_s1==I2->last_touched_s1)){
+                if(!(I->s1()==I2->s1()&&(!overlap(I->imm()+I->size(),I2->imm()+I2->size(),I->imm(),I2->imm()))&&I->last_touched_s1==I2->last_touched_s1)){
                     return false;
                 }
             }
         }
         //RAW in mem
-        for(const auto & child:load_stores[I->s1]){
+        for(const auto & child:load_stores[I->s1()]){
             int index=child.first;
             if(index>=I->idx){
                 break;
             }
-            if(Instructions[index]->Type==(type::ld)){
+            if(Instructions[index]->Type()==(type::ld)){
                 struct Instruction_Node * I2=Instructions[index];
-                if(!(I->s1==I2->s1&&(!overlap(I->imm+I->size,I2->imm+I2->size,I->imm,I2->imm))&&I->last_touched_s1==I2->last_touched_s1)){
+                if(!(I->s1()==I2->s1()&&(!overlap(I->imm()+I->size(),I2->imm()+I2->size(),I->imm(),I2->imm()))&&I->last_touched_s1==I2->last_touched_s1)){
                     return false;
                 }
             }
         }
     }
-    int source=I->s1;
+    int source=I->s1();
     if(source==-1||destinations[source].empty()||destinations[source].begin()->first>=I->idx){
-        source=I->s2;
+        source=I->s2();
         if(source==-1||destinations[source].empty()||destinations[source].begin()->first>=I->idx){
-            int destination=I->d;
+            int destination=I->d();
             if(destination==-1||sources[destination].empty()||sources[destination].begin()->first>=I->idx){
                 if(destination==-1||destinations[destination].empty()||destinations[destination].begin()->first>=I->idx){
                     return true;
@@ -104,8 +100,8 @@ void Update_Children(
     int Executed_Including_Nop
 ){
     //WAR in reg for rs1
-    if(I->s1!=-1 && !destinations[I->s1].empty()){
-        for(const auto & child:destinations[I->s1]){
+    if(I->s1()!=-1 && !destinations[I->s1()].empty()){
+        for(const auto & child:destinations[I->s1()]){
             if(child.first>I->idx){
                 int expected=Executed_Including_Nop+Nops_Needed(I,Instructions[child.first]);
                 Instructions[child.first]->expected_index=std::max(expected,Instructions[child.first]->expected_index);
@@ -116,8 +112,8 @@ void Update_Children(
         }
     }
     //WAR in reg for rs2
-    if(I->s2!=-1 && !destinations[I->s2].empty()){
-        for(const auto & child:destinations[I->s2]){
+    if(I->s2()!=-1 && !destinations[I->s2()].empty()){
+        for(const auto & child:destinations[I->s2()]){
             if(child.first>I->idx){
                 int expected=Executed_Including_Nop+Nops_Needed(I,Instructions[child.first]);
                 Instructions[child.first]->expected_index=std::max(expected,Instructions[child.first]->expected_index);
@@ -128,8 +124,8 @@ void Update_Children(
         }
     }
     //RAW in reg
-    if(I->d!=-1 && !sources[I->d].empty()){
-        for(const auto & child:sources[I->d]){
+    if(I->d()!=-1 && !sources[I->d()].empty()){
+        for(const auto & child:sources[I->d()]){
             if(child.first>I->idx){
                 int expected=Executed_Including_Nop+Nops_Needed(I,Instructions[child.first]);
                 Instructions[child.first]->expected_index=std::max(expected,Instructions[child.first]->expected_index);
@@ -140,8 +136,8 @@ void Update_Children(
         }
     }  
     //WAW in reg
-    if(I->d!=-1 && !destinations[I->d].empty()){
-        for(const auto & child:destinations[I->d]){
+    if(I->d()!=-1 && !destinations[I->d()].empty()){
+        for(const auto & child:destinations[I->d()]){
             if(child.first>I->idx){
                 int expected=Executed_Including_Nop+Nops_Needed(I,Instructions[child.first]);
                 Instructions[child.first]->expected_index=std::max(expected,Instructions[child.first]->expected_index);
@@ -153,12 +149,12 @@ void Update_Children(
     }
     
     //IF load or store checking for mem
-    if(I->Type==(type::ld)){
+    if(I->Type()==(type::ld)){
         //WAR
-        for(const auto & child:load_stores[I->s1]){
-            if(child.first>I->idx&&Instructions[child.first]->Type==(type::sd)){
+        for(const auto & child:load_stores[I->s1()]){
+            if(child.first>I->idx&&Instructions[child.first]->Type()==(type::sd)){
                 struct Instruction_Node *I2=Instructions[child.first];
-                if(!(I->s1==I2->s1&&(!overlap(I->imm+I->size,I2->imm+I2->size,I->imm,I2->imm))&&I->last_touched_s1==I2->last_touched_s1)){
+                if(!(I->s1()==I2->s1()&&(!overlap(I->imm()+I->size(),I2->imm()+I2->size(),I->imm(),I2->imm()))&&I->last_touched_s1==I2->last_touched_s1)){
                     int expected=Executed_Including_Nop+Nops_Needed(I,I2);
                     I2->expected_index=std::max(expected,I2->expected_index);
                     if(Check_Dependecy(sources,destinations,load_stores,Instructions,I2)){
@@ -169,12 +165,12 @@ void Update_Children(
         }
     }
 
-    if(I->Type==(type::sd)){
+    if(I->Type()==(type::sd)){
         //WAW
-        for(const auto & child:load_stores[I->s1]){
-            if(child.first>I->idx&&Instructions[child.first]->Type==(type::sd)){
+        for(const auto & child:load_stores[I->s1()]){
+            if(child.first>I->idx&&Instructions[child.first]->Type()==(type::sd)){
                 struct Instruction_Node *I2=Instructions[child.first];
-                if(!(I->s1==I2->s1&&(!overlap(I->imm+I->size,I2->imm+I2->size,I->imm,I2->imm))&&I->last_touched_s1==I2->last_touched_s1)){
+                if(!(I->s1()==I2->s1()&&(!overlap(I->imm()+I->size(),I2->imm()+I2->size(),I->imm(),I2->imm()))&&I->last_touched_s1==I2->last_touched_s1)){
                     int expected=Executed_Including_Nop+Nops_Needed(I,I2);
                     I2->expected_index=std::max(expected,I2->expected_index);
                     if(Check_Dependecy(sources,destinations,load_stores,Instructions,I2)){
@@ -184,10 +180,10 @@ void Update_Children(
             }
         }
         //RAW
-        for(const auto & child:load_stores[I->s1]){
-            if(child.first>I->idx&&Instructions[child.first]->Type==(type::ld)){
+        for(const auto & child:load_stores[I->s1()]){
+            if(child.first>I->idx&&Instructions[child.first]->Type()==(type::ld)){
                 struct Instruction_Node *I2=Instructions[child.first];
-                if(!(I->s1==I2->s1&&(!overlap(I->imm+I->size,I2->imm+I2->size,I->imm,I2->imm))&&I->last_touched_s1==I2->last_touched_s1)){
+                if(!(I->s1()==I2->s1()&&(!overlap(I->imm()+I->size(),I2->imm()+I2->size(),I->imm(),I2->imm()))&&I->last_touched_s1==I2->last_touched_s1)){
                     int expected=Executed_Including_Nop+Nops_Needed(I,I2);
                     I2->expected_index=std::max(expected,I2->expected_index);
                     if(Check_Dependecy(sources,destinations,load_stores,Instructions,I2)){
@@ -213,7 +209,7 @@ void Scheduler(std::vector<int>&Final_Instructions, std::string input_filename) 
             continue;
         }
 		// check if the first instruction is branch
-		if (Instructions[0]->Type==type::branch) {
+		if (Instructions[0]->branch_flag) {
 			Final_Instructions.push_back(Instructions[0]->idx);
 			Instructions.erase(Instructions.begin());
 		}
@@ -224,8 +220,8 @@ void Scheduler(std::vector<int>&Final_Instructions, std::string input_filename) 
         std::vector<int> last_touched(32,-1);
         for(struct Instruction_Node * I:Instructions){
             I->idx=I->idx-index1;
-            if(I->d>=0){last_touched[I->d]=I->idx;}
-            if(I->s1>=0){I->last_touched_s1=last_touched[I->s1];}
+            if(I->d()>=0){last_touched[I->d()]=I->idx;}
+            if(I->s1()>=0){I->last_touched_s1=last_touched[I->s1()];}
         }
 		std::vector<std::map<int,int>> sources(32);
 		std::vector<std::map<int,int>> destinations(32);
@@ -233,7 +229,7 @@ void Scheduler(std::vector<int>&Final_Instructions, std::string input_filename) 
 		Make_Graph(Instructions,sources,destinations,load_stores);
 
 		//Heuristic of choice
-    	Heuristic1(Instructions,sources,destinations);
+    	Heuristic2(Instructions,sources,destinations);
 
 		std::priority_queue<struct Instruction_Node *,std::vector<struct Instruction_Node *>,Compare_Instructions> Priority_List;
 		std::set<struct Instruction_Node *> Wait_List;
@@ -248,11 +244,11 @@ void Scheduler(std::vector<int>&Final_Instructions, std::string input_filename) 
 				Final_Instructions.push_back(I->idx+index1);
 				Priority_List.pop(); // pluck an instruction
 				std::cout<<"Executed "<<I->idx+index1+1<<"\n";
-				if(I->s1!=-1){sources[I->s1].erase(I->idx);}
-				if(I->s2!=-1){sources[I->s2].erase(I->idx);}
-				if(I->d!=-1){destinations[I->d].erase(I->idx);}
-                if(I->Type==(type::ld)||I->Type==(type::sd)){
-                    load_stores[I->s1].erase(I->idx);
+				if(I->s1()!=-1){sources[I->s1()].erase(I->idx);}
+				if(I->s2()!=-1){sources[I->s2()].erase(I->idx);}
+				if(I->d()!=-1){destinations[I->d()].erase(I->idx);}
+                if(I->Type()==(type::ld)||I->Type()==(type::sd)){
+                    load_stores[I->s1()].erase(I->idx);
                 }
 				Update_Children(Instructions,sources,destinations,Wait_List,load_stores,I,Executed_Including_NOP);
 			}
