@@ -6,12 +6,12 @@
 #include <map>
 #include <cstdint>
 
-enum class type {R, ld, sd, branch, misc, I};
-
 static inline int32_t sign_extend(uint32_t value, int bits) {
     int shift = 32 - bits;
     return (int32_t)(value << shift) >> shift;
 }
+enum class type {R, ld, sd, branch, misc, I};
+namespace Kites::Reorder{
 
 struct Instruction_Node {
     // ---- stored fields ----
@@ -130,13 +130,13 @@ struct Compare_Instructions {
 };
 
 // Function declarations
-struct Instruction_Node* Instruction_Decode(const std::string &hexcode, int index);
-int Read_File(std::vector<struct Instruction_Node*>& Instructions, std::string input_filename="instructions.hex");
-void Read_File_for_branch(std::vector <std::vector <struct Instruction_Node*> >& Instruction_blocks, std::string input_filename="instructions.hex");
-void Make_Graph(std::vector<struct Instruction_Node*>& Instructions, 
+struct Instruction_Node* Instruction_Decode(const uint32_t instruction, int index);
+int Read_File(std::vector<struct Kites::Reorder::Instruction_Node*>& Instructions, std::vector<uint32_t>&Hexcodes);
+void Read_File_for_branch(std::vector <std::vector <struct Kites::Reorder::Instruction_Node*> >& Instruction_blocks, const std::vector<uint32_t>&Hexcodes);
+void Make_Graph(std::vector<struct Kites::Reorder::Instruction_Node*>& Instructions, 
                 std::vector<std::map<int,int>>& soruces, 
                std::vector<std::map<int,int>>& destination,
                std::vector<std::map<int,int>>& load_stores
             );
-
+}
 #endif

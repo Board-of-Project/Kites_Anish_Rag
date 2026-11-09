@@ -1,14 +1,16 @@
 #include "utils.h"
 #include <vector>
 #include <iostream>
-
+#include "dependency_graph.h"
 
 //check overlap
 bool overlap(int h1,int h2,int l1,int l2){
     return !(l1>h2||l2>h1);
 }
+
+namespace Kites::Reorder{
 // num of nops in between
-int Nops_Needed(struct Instruction_Node * &I1,struct Instruction_Node * &I2){
+int Nops_Needed(struct Kites::Reorder::Instruction_Node * &I1,struct Kites::Reorder::Instruction_Node * &I2,Kites::Reorder::Proc p){
     if((I1->d()==I2->s1()||I1->d()==I2->s2()) && I1->d()!=-1){
         return 2;
     }
@@ -19,9 +21,9 @@ int Nops_Needed(struct Instruction_Node * &I1,struct Instruction_Node * &I2){
 }
 
 // counts the number of nops to be added
-void Num_Hazards(std::vector <std::vector <struct Instruction_Node*>>& Instruction_blocks) {
+void Num_Hazards(std::vector <std::vector <struct Kites::Reorder::Instruction_Node*>>& Instruction_blocks,Kites::Reorder::Proc p) {
 	// flattening
-	std::vector<struct Instruction_Node*> Instructions;
+	std::vector<struct Kites::Reorder::Instruction_Node*> Instructions;
 	for (auto& block: Instruction_blocks) {
 		Instructions.insert(Instructions.end(), block.begin(), block.end());
 	}
@@ -35,7 +37,7 @@ void Num_Hazards(std::vector <std::vector <struct Instruction_Node*>>& Instructi
 		cumm_nops[child]=cumm_nops[child-1];
 		for (int parent=child-1; parent>=0 && parent>=child-range; parent--) {
 			int curr_gap = cumm_nops[child]-cumm_nops[parent] + child-parent-1;
-			int ideal_gap = Nops_Needed(Instructions[parent], Instructions[child]);
+			int ideal_gap = Nops_Needed(Instructions[parent], Instructions[child],p);
 			cumm_nops[child] = cumm_nops[child] + ((ideal_gap>curr_gap)?(ideal_gap-curr_gap):0);
 			if (child-parent-1 < ideal_gap) hazards++;
 		}
@@ -44,5 +46,7 @@ void Num_Hazards(std::vector <std::vector <struct Instruction_Node*>>& Instructi
 	std::cout << "This code currently has " << hazards << " data hazards,\n";
 	std::cout << "Number of nops to be added without rearrangement " << cumm_nops[cumm_nops.size()-1] << "\n";
 	
+
+}
 
 }

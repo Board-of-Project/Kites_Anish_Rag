@@ -2,6 +2,8 @@
 #define SCHEDULER_H
 
 #include "dependency_graph.h"
+#include "utils.h"
+#include "heuristic.h"
 #include <string>
 #include <vector>
 #include <map>
@@ -9,6 +11,8 @@
 #include <set>
 
 bool overlap(int h1,int h2,int l1,int l2);
+namespace Kites::Reorder{
+
 
 bool Check_Dependecy(
     std::vector<std::map<int,int> >&sources,
@@ -30,8 +34,9 @@ void Update_Children(
     std::set<struct Instruction_Node *> &Wait_List,
     std::vector<std::map<int,int> >&load_stores,
     struct Instruction_Node *I,
-    int Executed_Including_Nop
+    int Executed_Including_Nop,
+    Kites::Reorder::Proc p
 );
-void Scheduler(std::vector<int>&Final_Instructions, std::string input_filename="instructions.hex");
-
+void Scheduler(std::vector<int>&Final_Instructions,const std::vector<uint32_t>&Hexcodes,Kites::Reorder::Proc processor,Kites::Reorder::HeuristicEntry H);
+}
 #endif
