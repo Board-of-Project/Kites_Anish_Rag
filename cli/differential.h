@@ -22,6 +22,9 @@ struct DifferentialOptions
     std::string vmName = "rvss";       ///< forwarded to kites-cli --vm
     std::vector<std::string> memDumpArgs; ///< <hex_addr> <rows> pairs, compared when non-empty
     int timeoutMs = 60000;             ///< limit for the generator and for each Kites run
+    std::string cyclesOriginalFile;    ///< append the original program's total cycles here
+    std::string cyclesModifiedFile;    ///< append the reordered/generated program's cycles here
+    unsigned maxCycles = 0;            ///< forwarded to each Kites run when non-zero
     bool compareCsrs = false; ///< cycle/instret style CSRs legitimately differ, so off by default
 };
 

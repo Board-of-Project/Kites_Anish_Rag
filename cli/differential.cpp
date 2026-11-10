@@ -42,6 +42,7 @@ struct Snapshot
     std::map<std::string, std::string> gpr, fpr, csr; ///< register name -> hex string
     std::string memoryDump;
     std::string registersError;    ///< set if registers_dump.json could not be parsed
+    long long cycles = -1;         ///< total cycles, -1 if the child did not report any
     std::string reorderError;      ///< "Reorder failed: ..." text from a child that exit(6)'d
 };
 
@@ -93,6 +94,11 @@ std::map<std::string, std::string> JsonSection(const QJsonObject &root, const ch
 /// kites-cli exit code meaning "the reorder step itself threw" (see cli/main.cpp).
 constexpr int kReorderFailedExit = 6;
 
+fs::path CyclesPath()
+{
+    return globals::vm_state_directory / "cycles_out.txt";
+}
+
 fs::path ReorderedHexPath()
 {
     return globals::vm_state_directory / "reordered_program.hex";
@@ -108,9 +114,18 @@ Snapshot RunKites(const std::string &file, const DifferentialOptions &opt, int r
     std::ofstream(globals::memory_dump_file_path, std::ios::trunc).close();
     std::error_code removeEc;
     fs::remove(ReorderedHexPath(), removeEc);
+    fs::remove(CyclesPath(), removeEc);
 
     QStringList args{QString::fromStdString(file), "--vm", QString::fromStdString(opt.vmName)};
     // memDumpArgs is a flat <addr> <rows> list; each pair needs its own --mem-dump flag.
+    if (!opt.cyclesOriginalFile.empty() || !opt.cyclesModifiedFile.empty())
+    {
+        args << "--cycles-out" << QString::fromStdString(CyclesPath().string());
+    }
+    if (opt.maxCycles != 0)
+    {
+        args << "--max-cycles" << QString::number(opt.maxCycles);
+    }
     if (reorderHeuristic >= 0)
     {
         args << "--reorder" << QString::number(reorderHeuristic);
@@ -183,6 +198,13 @@ Snapshot RunKites(const std::string &file, const DifferentialOptions &opt, int r
     }
 
     snap.memoryDump = ReadFile(globals::memory_dump_file_path);
+
+    std::ifstream cyclesIn(CyclesPath());
+    long long cycles = -1;
+    if (cyclesIn >> cycles)
+    {
+        snap.cycles = cycles;
+    }
     return snap;
 }
 
@@ -226,7 +248,7 @@ std::vector<std::string> Compare(const Snapshot &a, const Snapshot &b, bool comp
     {
         diffs.push_back("kites exit code differs: original " + std::to_string(a.exitCode) +
                         ", generated " + std::to_string(b.exitCode) +
-                        " (1 = assembly failed, 2 = runtime error)");
+                        " (1 = assembly failed, 2 = runtime error, 7 = did not finish)");
     }
     if (!b.registersError.empty() || !a.registersError.empty())
     {
@@ -313,6 +335,36 @@ void StoreAndAnnounce(const DifferentialOptions &opt, const fs::path &generatedF
     }
 }
 
+
+/// Appends one line to each requested cycles file. Only done when both runs reported cycles, so
+/// line N of the two files always belongs to the same comparison.
+void AppendCycles(const DifferentialOptions &opt, const Snapshot &original,
+                  const Snapshot &modified)
+{
+    if (original.cycles < 0 || modified.cycles < 0)
+    {
+        return;
+    }
+    if (!opt.cyclesOriginalFile.empty())
+    {
+        std::ofstream(opt.cyclesOriginalFile, std::ios::app) << original.cycles << "\n";
+    }
+    if (!opt.cyclesModifiedFile.empty())
+    {
+        std::ofstream(opt.cyclesModifiedFile, std::ios::app) << modified.cycles << "\n";
+    }
+}
+
+std::string CyclesSuffix(const Snapshot &original, const Snapshot &modified)
+{
+    if (original.cycles < 0 || modified.cycles < 0)
+    {
+        return "";
+    }
+    return " [cycles " + std::to_string(original.cycles) + " -> " +
+           std::to_string(modified.cycles) + "]";
+}
+
 /// In-process reordering: for each heuristic, a child kites-cli applies reorderProgram() to the
 /// assembled words and runs the result directly. No generated file is written or parsed.
 int RunReorderChecks(const DifferentialOptions &opt, const Snapshot &original)
@@ -348,14 +400,16 @@ int RunReorderChecks(const DifferentialOptions &opt, const Snapshot &original)
         }
 
         const std::vector<std::string> diffs = Compare(original, reordered, opt.compareCsrs);
+        AppendCycles(opt, original, reordered);
         if (diffs.empty())
         {
-            std::cout << "MATCH " << label << std::endl;
+            std::cout << "MATCH " << label << CyclesSuffix(original, reordered) << std::endl;
             continue;
         }
 
         std::ostringstream report;
-        report << "Input: " << opt.inputFile << "\nReorder " << label << "\n"
+        report << "Input: " << opt.inputFile << "\nReorder " << label
+               << CyclesSuffix(original, reordered) << "\n"
                << diffs.size() << " difference(s):\n";
         for (const std::string &d : diffs)
         {
@@ -376,10 +430,12 @@ int RunDifferential(const DifferentialOptions &opt)
 {
     // 1. Run the original input on Kites.
     const Snapshot original = RunKites(opt.inputFile, opt);
-    if (!original.launched || original.exitCode == 1)
+    if (!original.launched || original.exitCode == 1 || original.exitCode == 7)
     {
         std::cerr << "Original input could not be run on Kites ("
-                  << (original.launched ? "assembly failed" : original.launchError)
+                  << (!original.launched ? original.launchError
+                      : original.exitCode == 7 ? "it did not finish (infinite loop?)"
+                                               : "assembly failed")
                   << "); nothing to compare." << std::endl;
         return DIFF_BAD_INPUT;
     }
@@ -444,11 +500,13 @@ int RunDifferential(const DifferentialOptions &opt)
     // 3. Run the generated file on Kites and compare.
     const Snapshot generated = RunKites(generatedFile.string(), opt);
     const std::vector<std::string> diffs = Compare(original, generated, opt.compareCsrs);
+    AppendCycles(opt, original, generated);
 
     if (diffs.empty())
     {
         std::cout << "MATCH: '" << opt.inputFile
-                  << "' and its generated file produce identical results." << std::endl;
+                  << "' and its generated file produce identical results."
+                  << CyclesSuffix(original, generated) << std::endl;
         return DIFF_MATCH;
     }
 
