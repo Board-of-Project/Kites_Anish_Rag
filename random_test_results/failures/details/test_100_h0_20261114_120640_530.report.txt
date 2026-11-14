@@ -1,0 +1,4 @@
+Input: ./random_test_results/tests/test_100.s
+Reorder heuristic 0 (Weighted subtree) [cycles 168 -> 153]
+1 difference(s):
+  - x12: original 0x000000000000060c, generated 0x000000000000070c

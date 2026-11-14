@@ -11,7 +11,6 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
-#include <fstream>
 
 namespace Kites
 {
@@ -125,7 +124,7 @@ uint32_t generateI3TypeMachineCode(const ICUnit &block)
     const auto &encoding = instruction_set::I3_type_instruction_encoding_map.at(block.getOpcode());
     const uint32_t rd = 0;
     const uint32_t rs1 = 0;
-    const uint32_t imm = 0;
+    const uint32_t imm = static_cast<uint32_t>(encoding.imm.to_ulong());
     uint32_t machineCode = 0;
     machineCode |= (imm << 20);
     machineCode |= (rs1 << 15);
@@ -440,19 +439,6 @@ generateMachineCode(const std::vector<std::pair<ICUnit, bool>> &IntermediateCode
             throw std::runtime_error("Invalid instruction type: " + block.getOpcode());
         }
         machine_code.push_back(code);
-    }
-
-
-    {
-        std::ofstream outfile("instructions.hex");
-        if (outfile.is_open())
-        {
-            for (uint32_t code : machine_code)
-            {
-                outfile << "0x" << std::hex << std::setw(8) << std::setfill('0') << code << "\n";
-            }
-            outfile.close();
-        }
     }
     return machine_code;
 }

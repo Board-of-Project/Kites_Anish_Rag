@@ -1,0 +1,9 @@
+Input: ./random_test_results/tests/test_145.s
+Reorder heuristic 0 (Weighted subtree) [cycles 193 -> 165]
+6 difference(s):
+  - x11: original 0x003ffffffff9cba2, generated 0xffffffffe72e9002
+  - x12: original 0xffffffffe72e8bca, generated 0xffffffffe72e92c2
+  - x13: original 0xfffffffffffffa8a, generated 0xfffffffffffff98e
+  - x6: original 0xffffffffe72e8b0a, generated 0xffffffffe72e9000
+  - x7: original 0xffffffffe72e8b0c, generated 0xffffffffe72e9002
+  - x9: original 0xffffffffe72e8b0a, generated 0xffffffffe72e9000

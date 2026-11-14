@@ -17,11 +17,14 @@
 #include <QObject>
 #include <QString>
 
+#include <atomic>
+#include <chrono>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <stdexcept>
 #include <string>
+#include <thread>
 #include <unordered_map>
 #include <vector>
 
@@ -54,7 +57,7 @@ void printUsage(const char *programName)
         << "  --cycles-modified <file>  with --compare-*: append the reordered/generated cycles\n"
            "                  (one line per comparison; lines of the two files correspond)\n"
         << "  --max-cycles <n>      stop a run that has not finished after n cycles\n"
-           "                  (default: 20000 for rvss, 500000 for the 5-stage VMs)\n"
+           "                  (default: 20000)\n"
         << "  --compare-csr         also compare CSRs (off by default; cycle/instret differ)\n";
 }
 
@@ -379,54 +382,55 @@ int main(int argc, char *argv[])
     // Known limitation: a program hitting a blocking read syscall will hang here
     // forever, since nothing in this CLI feeds terminal stdin into the VM's input
     // queue yet (that's separate, future work).
-    // Stepped by hand instead of manager.run(): the pipelined run loop never terminates when
-    // there is no GUI, and a program stuck in an infinite loop would otherwise hang forever.
+    // LoadProgram() adds a breakpoint at the end of the program. The pipelined VMs are still
+    // draining when their PC reaches it, so run() paused itself there and, with no GUI to
+    // resume it, waited forever. Clear all breakpoints; the CLI never uses them.
+    manager.setBreakpoints({});
+
+    // Cycle cap for runaway programs. manager.step() is not usable for this: when the program
+    // finishes it calls RequestStop(), which resets the whole VM. So run() is used as is, with
+    // a watchdog thread that pauses and then stops it if the cap is exceeded.
     bool timedOut = false;
     {
-        const bool singleCycle = processorTypeIt->second == Kites::ProcessorType::RVSS;
-        const uint64_t endPc = static_cast<uint64_t>(program.text_buffer.size()) * 4;
-        // Single-cycle steps are ~100x slower than pipelined ones (they write the register and
-        // VM-state files every step), so they get a lower default cap.
-        const unsigned kMaxCycles = maxCycles ? maxCycles : (singleCycle ? 20000u : 500000u);
-        constexpr int kDrainCycles = 8;          // idle cycles after the last fetch = pipeline empty
-        unsigned lastRetired = 0;
-        unsigned lastRetireCycle = 0;
-        int idle = 0;
-        bool finished = program.text_buffer.empty();
-        for (unsigned cycle = 0; !finished && !runFailed && cycle < kMaxCycles; ++cycle)
-        {
-            if (singleCycle && manager.getProgramCounter() >= endPc)
+        // Every step notifies the UI layer and writes state files, ~0.1-0.2 ms per cycle, so
+        // the default cap keeps a runaway program to a few seconds. Raise it with --max-cycles.
+        const unsigned kMaxCycles = maxCycles ? maxCycles : 20000u;
+
+        std::atomic<bool> runDone{false};
+        std::atomic<bool> capHit{false};
+        std::thread watchdog(
+            [&]()
             {
-                finished = true;
-                break;
-            }
-            manager.step();
-            if (!singleCycle)
-            {
-                const unsigned retired = manager.getInstructionsRetired();
-                if (retired != lastRetired)
+                while (!runDone)
                 {
-                    lastRetired = retired;
-                    lastRetireCycle = manager.getCycles();
-                    idle = 0;
+                    if (manager.getCycles() > kMaxCycles)
+                    {
+                        capHit = true;
+                        manager.pause();
+                        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+                        manager.stop();
+                        return;
+                    }
+                    std::this_thread::sleep_for(std::chrono::milliseconds(5));
                 }
-                else if (manager.getProgramCounter() >= endPc && ++idle >= kDrainCycles)
-                {
-                    finished = true;
-                }
-            }
-        }
-        timedOut = !finished && !runFailed;
-        if (finished && !runFailed && !cyclesOut.empty())
-        {
-            // Pipelined VMs only (checked at start-up): total cycles = the cycle in which the
-            // last instruction retired, excluding the idle cycles spent draining the pipeline.
-            std::ofstream(cyclesOut, std::ios::trunc) << lastRetireCycle << "\n";
-        }
+            });
+
+        manager.run();
+
+        runDone = true;
+        watchdog.join();
+        timedOut = capHit && !runFailed;
+
         if (timedOut)
         {
             std::cerr << "Run did not finish within " << kMaxCycles
-                      << " cycles (infinite loop? use --max-cycles to raise the limit)." << std::endl;
+                      << " cycles (infinite loop? use --max-cycles to raise the limit)."
+                      << std::endl;
+        }
+        else if (!runFailed && !cyclesOut.empty())
+        {
+            // Pipelined VMs only (checked at start-up): cycles until the pipeline has drained.
+            std::ofstream(cyclesOut, std::ios::trunc) << manager.getCycles() << "\n";
         }
     }
 

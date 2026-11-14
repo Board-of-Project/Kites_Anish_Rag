@@ -1,19 +1,18 @@
 #include "reorder_sim.h"
 
+#include "processor/processor_base.h"
+#include "processor/processor_factory.h"
 #include "processor/processor_manager.h"
-#include "processor/registers.h"
 
-#include <QObject>
-#include <QString>
+#include <exception>
+#include <memory>
 
 namespace Kites::reorder_tab
 {
 namespace
 {
 constexpr uint32_t kEcall = 0x00000073;
-constexpr uint64_t kSyscallExit = 10;
 constexpr uint64_t kSyscallRead = 63;
-constexpr int kDrainCycles = 8; // idle cycles after the last fetch that mean "pipeline empty"
 } // namespace
 
 SimResult simulateProgram(const AssembledProgram &program, ProcessorType type, unsigned maxCycles)
@@ -25,77 +24,48 @@ SimResult simulateProgram(const AssembledProgram &program, ProcessorType type, u
         return result;
     }
 
-    ProcessorManager manager(nullptr, type);
-    manager.setStepDelay(0);
-    QObject::connect(&manager, &ProcessorManager::runErrorSignal, &manager,
-                     [&](const QString &message, int)
-                     {
-                         if (result.error.empty())
-                         {
-                             result.error = message.toStdString();
-                         }
-                     });
-    manager.loadProgram(program);
+    // Constructing a ProcessorManager registers every VM type with the factory (idempotent).
+    ProcessorManager registry(nullptr, type);
+    std::unique_ptr<ProcessorBase> processor = ProcessorFactory::createVM(type);
+    processor->LoadProgram(program);
+    processor->SetBreakpoints({}); // drop the automatic end-of-program breakpoint
 
-    const uint64_t endPc = static_cast<uint64_t>(program.text_buffer.size()) * 4;
     const bool singleCycle = type == ProcessorType::RVSS;
+    bool moreWork = true;
+    unsigned steps = 0;
 
-    unsigned lastRetired = 0;
-    unsigned lastRetireCycle = 0;
-    int idle = 0;
-
-    for (unsigned i = 0; i < maxCycles; ++i)
+    try
     {
-        const uint64_t pc = manager.getProgramCounter();
-
-        if (singleCycle)
+        while (moreWork && steps < maxCycles)
         {
-            if (pc >= endPc)
+            if (singleCycle)
             {
-                result.finished = true;
-                break;
-            }
-            // The RVSS exit ecall would call exit(0) on the whole application, and a read
-            // ecall would wait for input forever, so stop right before either of them.
-            if (program.text_buffer[pc / 4] == kEcall)
-            {
-                const uint64_t a7 = manager.getRegisterFile()->ReadGpr(17);
-                if (a7 == kSyscallExit || a7 == kSyscallRead)
+                // A read ecall would wait for input that never comes: stop right before it.
+                const uint64_t pc = processor->program_counter_;
+                if (pc / 4 < program.text_buffer.size() && program.text_buffer[pc / 4] == kEcall &&
+                    processor->registers_.ReadGpr(17) == kSyscallRead)
                 {
-                    result.finished = true;
-                    result.note = a7 == kSyscallExit ? "stopped at exit ecall"
-                                                      : "stopped at input ecall";
+                    result.note = "stopped at input ecall";
+                    moreWork = false;
                     break;
                 }
             }
-        }
-
-        manager.step();
-        if (!result.error.empty())
-        {
-            break;
-        }
-
-        if (!singleCycle)
-        {
-            const unsigned retired = manager.getInstructionsRetired();
-            if (retired != lastRetired)
+            moreWork = processor->StepAndNotify();
+            ++steps;
+            if (processor->IsStopRequested()) // e.g. the exit syscall
             {
-                lastRetired = retired;
-                lastRetireCycle = manager.getCycles();
-                idle = 0;
-            }
-            else if (manager.getProgramCounter() >= endPc && ++idle >= kDrainCycles)
-            {
-                result.finished = true;
-                break;
+                moreWork = false;
             }
         }
     }
+    catch (const std::exception &e)
+    {
+        result.error = e.what();
+    }
 
-    result.retired = manager.getInstructionsRetired();
-    result.stalls = manager.getStallCycles();
-    result.cycles = singleCycle ? manager.getCycles() : lastRetireCycle;
+    result.finished = !moreWork && result.error.empty();
+    result.cycles = processor->cycle_s_;
+    result.retired = processor->instructions_retired_;
     if (!result.finished && result.error.empty())
     {
         result.note = "did not finish within " + std::to_string(maxCycles) + " cycles";
