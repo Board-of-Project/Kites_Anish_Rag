@@ -39,7 +39,7 @@ struct Instruction_Node {
     int d() const {
         switch (opcode()) {
             case 0x33: case 0x3B: case 0x03: case 0x13:
-            case 0x37: case 0x17: case 0x67: case 0x6F: {
+            case 0x37: case 0x17: case 0x67: case 0x6F: case 0x1B:{
                 int r = (instr >> 7) & 0x1F;
                 return r ? r : -1;
             }
@@ -50,7 +50,7 @@ struct Instruction_Node {
     int s1() const {
         switch (opcode()) {
             case 0x33: case 0x3B: case 0x03: case 0x13:
-            case 0x23: case 0x63: case 0x67: {
+            case 0x23: case 0x63: case 0x67: case 0x1B:{
                 int r = (instr >> 15) & 0x1F;
                 return r ? r : -1;
             }
