@@ -21,6 +21,8 @@ using HeuristicFn =void (*)(
 const HeuristicEntry kHeuristics[] = {
     {"Weighted subtree", &(Kites::Reorder::Heuristic1)},
     {"Index", &(Kites::Reorder::Heuristic2)},
+    {"RL model",&(Kites::Reorder::HeuristicRL1)},
+    {"RL model dummy",&(Kites::Reorder::HeuristicRL2)}
 };
 constexpr size_t kHeuristicCount = sizeof(kHeuristics) / sizeof(kHeuristics[0]);
 

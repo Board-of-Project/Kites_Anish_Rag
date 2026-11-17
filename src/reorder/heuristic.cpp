@@ -3,7 +3,9 @@
 #include "utils.h"
 #include <vector>
 #include <map>
-#include <algorithm>
+#include <cstdlib>
+#include <iostream>
+#include <fstream>
 
 int Subtree(
     std::vector<int> &Dependencies,
@@ -42,6 +44,27 @@ int Subtree(
         return ans;
     }
 }
+
+void Ml_Data(
+    std::vector<struct Kites::Reorder::Instruction_Node *> Instructions,
+    std::vector<std::vector<int>> adj,
+    std::vector<std::vector<int>> me,
+    Kites::Reorder::Proc p
+){
+    for(int i=0;i<Instructions.size();i+=1){
+        me[i][0]=(int)(Instructions[i]->Type());
+        me[i][1]=Instructions[i]->s1();
+        me[i][2]=Instructions[i]->s2();
+        me[i][3]=Instructions[i]->d();
+        me[i][4]=Instructions[i]->idx;
+        for(int j=i+1;j<Instructions.size();j+=1){
+            if(Kites::Reorder::Edge(Instructions[i],Instructions[j])){
+                adj[i][j]=Kites::Reorder::Nops_Needed(Instructions[i],Instructions[j],p)+1;
+            }
+        }
+    }
+}
+
 namespace Kites::Reorder {
 
 // 1. Implementation of Heuristic1
@@ -55,7 +78,7 @@ void Heuristic1(
     std::vector<int> Dependecies(n, -1);
     for(int i = 0; i < Instructions.size(); i += 1) {
         // Explicit qualification if Subtree is outside the namespace
-        Instructions[i]->priority = ::Subtree(Dependecies, Instructions, sources, destinations, i, p);
+        Instructions[i]->priority = (double)(::Subtree(Dependecies, Instructions, sources, destinations, i, p));
     }
 }
 
@@ -68,8 +91,59 @@ void Heuristic2(
 ) {
     int n = Instructions.size();
     for(int i = 0; i < Instructions.size(); i += 1) {
-        Instructions[i]->priority = n - (Instructions[i]->idx);
+        Instructions[i]->priority =(double)( n - (Instructions[i]->idx));
     }
 }
 
+void HeuristicRL1(
+    std::vector<struct Instruction_Node *> &Instructions,
+    std::vector<std::map<int,int> > &sources,
+    std::vector<std::map<int,int> > &destinations,
+    Proc p
+){
+    std::vector<std::vector<int>> adj(Instructions.size(),std::vector<int>(Instructions.size(),0));
+    std::vector<std::vector<int>> me(Instructions.size(),std::vector<int>(5,0));
+    ::Ml_Data(Instructions,adj,me,p);
+
+    std::ofstream out("ml/input_adj.bin",std::ios::binary);
+    int n=Instructions.size();
+    out.write(reinterpret_cast<const char*>(&n),sizeof(int));
+    for(int i=0;i<Instructions.size();i+=1){
+        out.write(reinterpret_cast<const char*>(adj[i].data()),adj[i].size()*sizeof(int));
+    }
+
+    out.close();
+
+
+    std::ofstream out2("ml/input_me.bin",std::ios::binary);
+    for(int i=0;i<Instructions.size();i+=1){
+        out2.write(reinterpret_cast<const char*>(me[i].data()),me[i].size()*sizeof(int));
+    }
+
+    out2.close();
+
+    for(int i=0;i<Instructions.size();i+=1){
+        Instructions[i]->priority=0.0L;
+    }
+}
+
+
+void HeuristicRL2(
+    std::vector<struct Instruction_Node *> &Instructions,
+    std::vector<std::map<int,int> > &sources,
+    std::vector<std::map<int,int> > &destinations,
+    Proc p
+){
+    std::ifstream in("ml/priority_out.bin",std::ios::binary);
+
+    if(in.is_open()){
+        std::vector<double> priotities(Instructions.size());
+        in.read(reinterpret_cast<char *>(priotities.data()),Instructions.size()*sizeof(double));
+        in.close();
+        for(int i=0;i<Instructions.size();i+=1){
+            Instructions[i]->priority=priotities[i];
+        }
+    }
+    else{std::cerr<<"OUtput of model not found\n";}
+}
 } // na

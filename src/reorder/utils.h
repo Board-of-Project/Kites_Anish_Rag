@@ -9,6 +9,9 @@ enum class Proc { SingleCycle, NoHazardNoFwd, HazardNoFwd, NoHazardFwd, HazardFw
 int Nops_Needed(struct Kites::Reorder::Instruction_Node * &I1,struct Kites::Reorder::Instruction_Node * &I2,Kites::Reorder::Proc processor);
 
 void Num_Hazards(std::vector <std::vector <struct Kites::Reorder::Instruction_Node*>>& Instruction_blocks,Kites::Reorder::Proc processor);
+int Edge(struct Instruction_Node *I1,struct Instruction_Node *I2);
 }
+
+
 
 #endif

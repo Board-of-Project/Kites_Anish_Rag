@@ -353,6 +353,7 @@ void AppendCycles(const DifferentialOptions &opt, const Snapshot &original,
     {
         std::ofstream(opt.cyclesModifiedFile, std::ios::app) << modified.cycles << "\n";
     }
+
 }
 
 std::string CyclesSuffix(const Snapshot &original, const Snapshot &modified)

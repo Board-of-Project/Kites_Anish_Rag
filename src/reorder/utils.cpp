@@ -65,4 +65,29 @@ void Num_Hazards(std::vector <std::vector <struct Kites::Reorder::Instruction_No
 
 }
 
+int Edge(struct Instruction_Node *I1,struct Instruction_Node *I2){
+	//waw reg
+	if(I1->d()==I2->d()&&I1->d()!=-1){
+		return 1;
+	}
+	//war reg
+	else if(I1->s1()==I2->d()&&I1->s1()!=-1){
+		return 1;
+	}
+	else if(I1->s2()==I2->d()&&I1->s2()!=-1){
+		return 1;
+	}
+	//raw reg
+	else if((I1->d()==I2->s1()||I1->d()==I2->s2())&&I1->d()!=-1){
+		return 1;
+	}
+	else if(((I2->Type()==(type::ld) || I2->Type()==(type::sd))&&I1->Type()==(type::sd))||(I1->Type()==(type::ld)&&I2->Type()==(type::sd))){
+		if(!(I1->s1()==I2->s1()&&(!overlap(I1->imm()+I1->size(),I2->imm()+I2->size(),I1->imm(),I2->imm()))&&I1->last_touched_s1==I2->last_touched_s1)){
+			return 1;
+		}
+	}
+	return 0;
+}
+
+
 }

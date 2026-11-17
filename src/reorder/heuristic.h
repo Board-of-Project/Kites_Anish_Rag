@@ -32,5 +32,17 @@ void Heuristic2(
     std::vector<std::map<int,int> >&destinations,
     Proc p
 );
+void HeuristicRL1(
+    std::vector<struct Kites::Reorder::Instruction_Node *> &Instructions,
+    std::vector<std::map<int,int> >&sources,
+    std::vector<std::map<int,int> >&destinations,
+    Proc p
+);
+void HeuristicRL2(
+    std::vector<struct Kites::Reorder::Instruction_Node *> &Instructions,
+    std::vector<std::map<int,int> >&sources,
+    std::vector<std::map<int,int> >&destinations,
+    Proc p
+);
 }
 #endif
