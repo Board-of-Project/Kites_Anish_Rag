@@ -32,7 +32,7 @@ int Subtree(
             else if((Instructions[index]->d()==Instructions[i]->s1()||Instructions[index]->d()==Instructions[i]->s2())&&Instructions[index]->d()!=-1){
                 ans+=Subtree(Dependencies,Instructions,sources,destinations,i,processor)+Kites::Reorder::Nops_Needed(Instructions[index],Instructions[i],processor);
             }
-            else if((Instructions[i]->Type()==(type::ld)||Instructions[i]->Type()==(type::sd))&&(Instructions[index]->Type()==(type::ld)||Instructions[index]->Type()==(type::sd))){
+            else if(((Instructions[i]->Type()==(type::ld) || Instructions[i]->Type()==(type::sd))&&Instructions[index]->Type()==(type::sd))||(Instructions[index]->Type()==(type::ld)&&Instructions[i]->Type()==(type::sd))){
                 if(!(Instructions[index]->s1()==Instructions[i]->s1()&&(!overlap(Instructions[index]->imm()+Instructions[index]->size(),Instructions[i]->imm()+Instructions[i]->size(),Instructions[index]->imm(),Instructions[i]->imm()))&&Instructions[index]->last_touched_s1==Instructions[i]->last_touched_s1)){
                     ans+=Subtree(Dependencies,Instructions,sources,destinations,i,processor)+Kites::Reorder::Nops_Needed(Instructions[index],Instructions[i],processor);
                 }
