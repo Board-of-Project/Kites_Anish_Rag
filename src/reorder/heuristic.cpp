@@ -47,8 +47,8 @@ int Subtree(
 
 void Ml_Data(
     std::vector<struct Kites::Reorder::Instruction_Node *> Instructions,
-    std::vector<std::vector<int>> adj,
-    std::vector<std::vector<int>> me,
+    std::vector<std::vector<int>> &adj,
+    std::vector<std::vector<int>> &me,
     Kites::Reorder::Proc p
 ){
     for(int i=0;i<Instructions.size();i+=1){
