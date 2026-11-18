@@ -3,7 +3,7 @@
 #
 # For each iteration:
 #   1. call your random program generator to create a test program,
-#   2. run `kites-cli <program> --compare-reorder <heuristic>`, which runs the original and the
+#   2. run `kites-cli <program> --compare-reorder <heuristics>`, which runs the original and the
 #      reordered program, compares registers/memory, and appends both programs' total cycles
 #      to two text files (one line per comparison, line N of each file belongs together),
 #   3. failing programs are copied into <outdir>/failures by kites-cli.
@@ -12,6 +12,11 @@
 #   ./run_random_tests.sh -n 100 -b rand_gen.cpp            # compile rand_gen.cpp and use it
 #   ./run_random_tests.sh -n 100 -g "./rand_gen {out} {seed}"
 #   ./run_random_tests.sh -n 100 -g "./rand_gen {out} {seed}" -l 60   # fixed program length
+#
+# Heuristics (-H): a single index (0), a comma-separated vector of indices that together form the
+# priority vector (0,2,3 - first = most significant), or "all" (every heuristic on its own).
+# Several comparisons per program: separate them with ';' (quote it), e.g. -H "0;1,2;0,1,2"
+# runs three comparisons per program. Note each comparison adds one line to the cycle logs.
 #
 # The generator command is a template: {out} is replaced by the file to create, {seed} by a
 # number that changes every iteration and {len} by the -l value. With -l and no {len} in the
@@ -26,7 +31,7 @@ GEN_SOURCE=""
 LENGTH=""
 KITES="./build/kites-cli"
 VM="rv5-h-f"
-HEURISTIC="0"        # a heuristic index, or "all"
+HEURISTIC="0"        # "n", "n1,n2,..." (one priority vector), "all", or several of these joined by ";"
 OUTDIR="./random_test_results"
 SEED=100
 TIMEOUT=30
@@ -40,8 +45,10 @@ Usage: $0 -n <iterations> [options]
   -b <file>    generator source (.cpp): compile it with g++ and use it as the generator
   -l <num>     program length (instructions) passed to the generator (default: its own)
   -k <path>    kites-cli executable                               (default: $KITES)
-  -vm <vm>      rv5-nh-nf | rv5-h-nf | rv5-nh-f | rv5-h-f          (default: $VM)
-  -H <n|all>   heuristic index to test, or "all"                  (default: $HEURISTIC)
+  -v <vm>      rv5-nh-nf | rv5-h-nf | rv5-nh-f | rv5-h-f          (default: $VM)
+  -H <spec>    heuristics to test: "n", a comma-separated vector "n1,n2,n3" (one combined
+               priority vector, first = most significant), or "all"; separate several
+               comparisons with ';' e.g. "0;1,2"                  (default: $HEURISTIC)
   -o <dir>     output directory                                   (default: $OUTDIR)
   -s <seed>    first seed, incremented each iteration             (default: $SEED)
   -t <sec>     time limit for the generator and each Kites run    (default: $TIMEOUT)
@@ -73,6 +80,18 @@ done
 if [[ "$VM" == "rvss" ]]; then
     echo "Error: cycle comparison needs a pipelined VM (rv5-*), not rvss."; exit 1
 fi
+
+# Validate -H and split it into one --compare-reorder argument per ';'-separated entry.
+COMPARE_ARGS=()
+IFS=';' read -ra HEUR_SPECS <<< "$HEURISTIC"
+(( ${#HEUR_SPECS[@]} > 0 )) || { echo "Error: -H is empty."; usage; }
+for spec in "${HEUR_SPECS[@]}"; do
+    spec="${spec//[[:space:]]/}"
+    if [[ "$spec" != "all" && ! "$spec" =~ ^[0-9]+(,[0-9]+)*$ ]]; then
+        echo "Error: bad -H entry '$spec' (use n, n1,n2,n3, or all; separate comparisons with ';')."; usage
+    fi
+    COMPARE_ARGS+=(--compare-reorder "$spec")
+done
 
 [[ -z "$LENGTH" || "$LENGTH" =~ ^[0-9]+$ ]] || { echo "Error: -l must be a number."; usage; }
 
@@ -112,7 +131,7 @@ for (( i = 0; i < ITERATIONS; i++ )); do
     fi
 
     # 2. compare original vs reordered
-    "$KITES" "$prog" --vm "$VM" --compare-reorder "$HEURISTIC" \
+    "$KITES" "$prog" --vm "$VM" "${COMPARE_ARGS[@]}" \
         --fail-dir "$FAILS" --timeout "$TIMEOUT" \
         --cycles-original "$CYC_ORIG" --cycles-modified "$CYC_NEW" \
         >"$OUTDIR/last_stdout.txt" 2>"$OUTDIR/last_stderr.txt"
@@ -126,7 +145,7 @@ for (( i = 0; i < ITERATIONS; i++ )); do
         *) status="UNEXPECTED EXIT $rc";     other=$((other + 1)) ;;
     esac
     printf '[%d/%d] seed=%d  %s  %s\n' $((i + 1)) "$ITERATIONS" "$seed" "$status" \
-        "$(grep -hE '^(MATCH|MISMATCH)' "$OUTDIR/last_stdout.txt" "$OUTDIR/last_stderr.txt" | head -1 | grep -o '\[cycles[^]]*\]')"
+        "$(grep -hE '^(MATCH|MISMATCH)' "$OUTDIR/last_stdout.txt" "$OUTDIR/last_stderr.txt" | grep -o '\[cycles[^]]*\]' | paste -sd' ' -)"
 
     # keep only failing programs unless -K was given
     if (( rc == 0 && KEEP_ALL == 0 )); then

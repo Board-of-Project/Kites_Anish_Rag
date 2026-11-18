@@ -14,23 +14,24 @@
 
 class QComboBox;
 class QLabel;
+class QLineEdit;
 class QPlainTextEdit;
 class QPushButton;
 
 namespace Kites
 {
-class EditorTab;
-class ProcessorManager;
+  class EditorTab;
+  class ProcessorManager;
 
-/**
- * @brief Tab with the original program on the left and the reordered program on the right.
- *
- * Flow on "Reorder": editor text -> expand pseudo instructions -> assemble() -> reorder the
- * machine words -> list both versions -> simulate both on private VMs and show their cycles.
- * Nothing here touches the main VM, so the main program state is never disturbed.
- */
-class ReorderTab : public KitesTab
-{
+  /**
+   * @brief Tab with the original program on the left and the reordered program on the right.
+   *
+   * Flow on "Reorder": editor text -> expand pseudo instructions -> assemble() -> reorder the
+   * machine words -> list both versions -> simulate both on private VMs and show their cycles.
+   * Nothing here touches the main VM, so the main program state is never disturbed.
+   */
+  class ReorderTab : public KitesTab
+  {
     Q_OBJECT
 
   public:
@@ -51,6 +52,9 @@ class ReorderTab : public KitesTab
     using SimPair = std::pair<reorder_tab::SimResult, reorder_tab::SimResult>;
 
     bool assembleEditorText(AssembledProgram &program, QString &error);
+    /// Parses the comma-separated heuristic box ("0,2,3") and checks each index against
+    /// reorder::heuristicNames(). On failure returns false and fills `error`.
+    bool parseHeuristics(std::vector<std::size_t> &out, QString &error) const;
     static QString formatListing(const std::vector<uint32_t> &words,
                                  const std::vector<std::string> &lines);
     static QString statsText(const reorder_tab::SimResult &r);
@@ -58,10 +62,11 @@ class ReorderTab : public KitesTab
     EditorTab *m_editor = nullptr;
     ProcessorManager *m_vmManager = nullptr;
     QComboBox *m_processorBox = nullptr;
-    QComboBox *m_heuristicBox = nullptr;
+    QLineEdit *m_heuristicEdit = nullptr;
     QPushButton *m_runButton = nullptr;
     QPushButton *m_copyAsmButton = nullptr;
     QPushButton *m_copyHexButton = nullptr;
+    QLabel *m_heuristicList = nullptr; ///< always-visible "index: name" list of heuristics
     QLabel *m_status = nullptr;
     QLabel *m_summary = nullptr;
     QLabel *m_originalStats = nullptr;
@@ -75,5 +80,5 @@ class ReorderTab : public KitesTab
     // result of the last successful reorder, used by the copy buttons
     std::vector<uint32_t> m_lastWords;
     reorder_tab::Listing m_lastListing;
-};
+  };
 } // namespace Kites

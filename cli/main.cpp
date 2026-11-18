@@ -22,6 +22,7 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <thread>
@@ -30,45 +31,89 @@
 
 namespace
 {
-void printUsage(const char *programName)
-{
-    std::cerr
+    void printUsage(const char *programName)
+    {
+        std::cerr
         << "Usage: " << programName
         << " [assembly-file] [--vm <name>] [--mem-dump <hex_addr> <row_count>]... [--repl|-i]\n"
         << "  assembly-file   optional; if given without --repl, assembles, runs to\n"
         << "                  completion, and dumps state (batch mode)\n"
         << "  --vm <name>     rvss (default) | rv5-nh-nf | rv5-h-nf | rv5-nh-f | rv5-h-f\n"
         << "  --mem-dump      dump <row_count> 8-byte rows starting at <hex_addr>; "
-           "repeatable (batch mode only)\n"
+        "repeatable (batch mode only)\n"
         << "  --repl, -i      drop into the interactive REPL instead of auto-running;\n"
         << "                  if assembly-file is given it is loaded before the prompt\n"
         << "  (running with no assembly-file also enters the REPL)\n"
         << "  --compare-exe <path>  differential check: run <path> <assembly-file> <generated-file>,\n"
-           "                  run both files on Kites and compare results; on mismatch the\n"
-           "                  input is copied to --fail-dir\n"
+        "                  run both files on Kites and compare results; on mismatch the\n"
+        "                  input is copied to --fail-dir\n"
         << "  --fail-dir <dir>      where failing inputs are stored (default ./kites_failures)\n"
         << "  --timeout <sec>       limit for the generator and each Kites run (default 60)\n"
-        << "  --reorder <n>         run the program after applying built-in reorder heuristic <n>\n"
-        << "  --compare-reorder <n|all>  differential check of the built-in reorder heuristic(s):\n"
-           "                  original vs reordered, in-process, no generated file\n"
+        << "  --reorder <n[,n...]>  run the program after applying built-in reorder heuristics\n"
+        "                  (comma-separated indices, e.g. 0,2,3: they form the priority vector,\n"
+        "                  first = most significant; no spaces)\n"
+        << "  --compare-reorder <n[,n...]|all>  differential check of the built-in reorder heuristic(s):\n"
+        "                  original vs reordered, in-process, no generated file; repeatable\n"
+        "                  (each use is one run; 'all' = every heuristic on its own)\n"
         << "  --list-heuristics     print the heuristic names and their indices\n"
         << "  --cycles-out <file>   write this run's total cycles to <file> (overwrites); pipelined VMs only\n"
         << "  --cycles-original <file>  with --compare-*: append the original program's cycles\n"
         << "  --cycles-modified <file>  with --compare-*: append the reordered/generated cycles\n"
-           "                  (one line per comparison; lines of the two files correspond)\n"
+        "                  (one line per comparison; lines of the two files correspond)\n"
         << "  --max-cycles <n>      stop a run that has not finished after n cycles\n"
-           "                  (default: 20000)\n"
+        "                  (default: 20000)\n"
         << "  --compare-csr         also compare CSRs (off by default; cycle/instret differ)\n";
-}
+    }
 
-const std::unordered_map<std::string, Kites::ProcessorType> processorTypes = {
-    {"rvss", Kites::ProcessorType::RVSS},
-    {"rv5-nh-nf", Kites::ProcessorType::RV5Stage_NH_NF},
-    {"rv5-h-nf", Kites::ProcessorType::RV5Stage_H_NF},
-    {"rv5-nh-f", Kites::ProcessorType::RV5Stage_NH_F},
-    {"rv5-h-f", Kites::ProcessorType::RV5Stage_H_F},
-};
+    const std::unordered_map<std::string, Kites::ProcessorType> processorTypes = {
+        {"rvss", Kites::ProcessorType::RVSS},
+        {"rv5-nh-nf", Kites::ProcessorType::RV5Stage_NH_NF},
+        {"rv5-h-nf", Kites::ProcessorType::RV5Stage_H_NF},
+        {"rv5-nh-f", Kites::ProcessorType::RV5Stage_NH_F},
+        {"rv5-h-f", Kites::ProcessorType::RV5Stage_H_F},
+    };
 } // namespace
+
+/// Parses "0,2,3" into {0,2,3}. Whitespace around items is ignored; an empty item, a
+/// non-number or a negative number is an error. Range vs. the heuristic table is checked later.
+static bool parseHeuristicList(const std::string &text, std::vector<int> &out, std::string &error)
+{
+    out.clear();
+    std::stringstream ss(text);
+    std::string item;
+    while (std::getline(ss, item, ','))
+    {
+        const size_t b = item.find_first_not_of(" \t");
+        const size_t e = item.find_last_not_of(" \t");
+        if (b == std::string::npos)
+        {
+            error = "empty item in heuristic list '" + text + "'";
+            return false;
+        }
+        item = item.substr(b, e - b + 1);
+        try
+        {
+            size_t used = 0;
+            const int v = std::stoi(item, &used);
+            if (used != item.size() || v < 0)
+            {
+                throw std::invalid_argument(item);
+            }
+            out.push_back(v);
+        }
+        catch (const std::exception &)
+        {
+            error = "'" + item + "' is not a valid heuristic index";
+            return false;
+        }
+    }
+    if (out.empty() || (!text.empty() && text.back() == ','))
+    {
+        error = "empty heuristic list";
+        return false;
+    }
+    return true;
+}
 
 int main(int argc, char *argv[])
 {
@@ -80,7 +125,7 @@ int main(int argc, char *argv[])
     std::string processorTypeStr = "rvss";
     std::vector<std::string> memDumpArgs;
     bool replRequested = false;
-    int reorderHeuristic = -1;
+    std::vector<int> reorderHeuristics; // empty = no reordering
     std::string cyclesOut;
     unsigned maxCycles = 0; // 0 = pick a default per processor, see the run loop
     Kites::DifferentialOptions diffOptions;
@@ -201,29 +246,27 @@ int main(int argc, char *argv[])
             {
                 for (size_t n = 0; n < Kites::reorder::heuristicNames().size(); ++n)
                 {
-                    diffOptions.reorderHeuristics.push_back(static_cast<int>(n));
+                    diffOptions.reorderHeuristics.push_back({static_cast<int>(n)});
                 }
             }
             else
             {
-                int index = -1;
-                try
+                std::vector<int> indices;
+                std::string parseError;
+                if (!parseHeuristicList(value, indices, parseError))
                 {
-                    index = std::stoi(value);
-                }
-                catch (const std::exception &)
-                {
-                    std::cerr << "Error: " << arg << " expects a heuristic index"
-                              << (arg == "--compare-reorder" ? " or 'all'" : "") << ".\n";
+                    std::cerr << "Error: " << arg << ": " << parseError
+                    << ". Expected comma-separated heuristic indices, e.g. 0,2,3"
+                    << (arg == "--compare-reorder" ? " (or 'all')" : "") << ".\n";
                     return 1;
                 }
                 if (arg == "--reorder")
                 {
-                    reorderHeuristic = index;
+                    reorderHeuristics = std::move(indices);
                 }
                 else
                 {
-                    diffOptions.reorderHeuristics.push_back(index);
+                    diffOptions.reorderHeuristics.push_back(std::move(indices));
                 }
             }
         }
@@ -262,12 +305,12 @@ int main(int argc, char *argv[])
     }
 
     const bool wantsCycles = !cyclesOut.empty() || !diffOptions.cyclesOriginalFile.empty() ||
-                             !diffOptions.cyclesModifiedFile.empty();
+    !diffOptions.cyclesModifiedFile.empty();
     if (wantsCycles && processorTypeIt->second == Kites::ProcessorType::RVSS)
     {
         std::cerr << "Error: cycle output (--cycles-out/--cycles-original/--cycles-modified) is "
-                     "only supported for the pipelined VMs; use --vm rv5-nh-nf|rv5-h-nf|"
-                     "rv5-nh-f|rv5-h-f.\n";
+        "only supported for the pipelined VMs; use --vm rv5-nh-nf|rv5-h-nf|"
+        "rv5-nh-f|rv5-h-f.\n";
         return 1;
     }
 
@@ -281,9 +324,9 @@ int main(int argc, char *argv[])
         if (assemblyFile.empty() || replRequested)
         {
             std::cerr << "Error: --compare-exe/--compare-reorder need an input file and cannot be combined with "
-                         "--repl.\n";
-            printUsage(argv[0]);
-            return 1;
+            "--repl.\n";
+        printUsage(argv[0]);
+        return 1;
         }
         diffOptions.inputFile = assemblyFile;
         diffOptions.vmName = processorTypeStr;
@@ -306,8 +349,8 @@ int main(int argc, char *argv[])
                 state.currentProgram = program;
                 state.programLoaded = true;
                 std::cout << "Loaded '" << assemblyFile << "': " << program.text_buffer.size()
-                           << " instruction word(s), " << program.data_buffer.size()
-                           << " data item(s).\n";
+                << " instruction word(s), " << program.data_buffer.size()
+                << " data item(s).\n";
             }
             catch (const std::exception &e)
             {
@@ -330,19 +373,22 @@ int main(int argc, char *argv[])
     }
 
     // Optional in-process reordering of the assembled machine code (text section only).
-    if (reorderHeuristic >= 0)
+    if (!reorderHeuristics.empty())
     {
         try
         {
             const auto &names = Kites::reorder::heuristicNames();
-            if (static_cast<size_t>(reorderHeuristic) >= names.size())
+            std::vector<size_t> heuristicIndices;
+            for (int h : reorderHeuristics)
             {
-                throw std::invalid_argument("unknown heuristic index " +
-                                            std::to_string(reorderHeuristic));
+                if (static_cast<size_t>(h) >= names.size())
+                {
+                    throw std::invalid_argument("unknown heuristic index " + std::to_string(h));
+                }
+                heuristicIndices.push_back(static_cast<size_t>(h));
             }
             std::vector<uint32_t> reordered = Kites::reorder::reorderProgram(
-                program.text_buffer, processorTypeIt->second,
-                static_cast<size_t>(reorderHeuristic));
+                program.text_buffer, processorTypeIt->second, heuristicIndices);
             if (reordered.size() != program.text_buffer.size())
             {
                 throw std::runtime_error("reordering changed the instruction count");
@@ -367,11 +413,11 @@ int main(int argc, char *argv[])
     bool runFailed = false;
     std::string runErrorMsg;
     QObject::connect(&manager, &Kites::ProcessorManager::runErrorSignal, &manager,
-                      [&](const QString &message, int /*sourceLine*/)
-                      {
-                          runFailed = true;
-                          runErrorMsg = message.toStdString();
-                      });
+                     [&](const QString &message, int /*sourceLine*/)
+                     {
+                         runFailed = true;
+                         runErrorMsg = message.toStdString();
+                     });
 
     // ProcessorBase::step_delay_ defaults to 1000ms and is meant to pace the
     // GUI's per-instruction animation; it must be zeroed here or an N-instruction
@@ -424,8 +470,8 @@ int main(int argc, char *argv[])
         if (timedOut)
         {
             std::cerr << "Run did not finish within " << kMaxCycles
-                      << " cycles (infinite loop? use --max-cycles to raise the limit)."
-                      << std::endl;
+            << " cycles (infinite loop? use --max-cycles to raise the limit)."
+            << std::endl;
         }
         else if (!runFailed && !cyclesOut.empty())
         {
@@ -455,11 +501,11 @@ int main(int argc, char *argv[])
     }
 
     std::cout << "Assembled '" << assemblyFile << "': " << program.text_buffer.size()
-               << " instruction word(s), " << program.data_buffer.size() << " data item(s).\n"
-               << "Run " << (timedOut ? "did not finish" : (runFailed ? "failed" : "completed")) << ".\n"
-               << "Registers   -> " << Kites::globals::registers_dump_file_path.string() << "\n"
-               << "Disassembly -> " << Kites::globals::disassembly_file_path.string() << "\n"
-               << "Errors      -> " << Kites::globals::errors_dump_file_path.string();
+    << " instruction word(s), " << program.data_buffer.size() << " data item(s).\n"
+    << "Run " << (timedOut ? "did not finish" : (runFailed ? "failed" : "completed")) << ".\n"
+    << "Registers   -> " << Kites::globals::registers_dump_file_path.string() << "\n"
+    << "Disassembly -> " << Kites::globals::disassembly_file_path.string() << "\n"
+    << "Errors      -> " << Kites::globals::errors_dump_file_path.string();
     if (!memDumpArgs.empty())
     {
         std::cout << "\nMemory      -> " << Kites::globals::memory_dump_file_path.string();
