@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <fstream>
+#include <filesystem>
 
 int Subtree(
     std::vector<int> &Dependencies,
@@ -56,7 +57,7 @@ void Ml_Data(
         me[i][1]=Instructions[i]->s1();
         me[i][2]=Instructions[i]->s2();
         me[i][3]=Instructions[i]->d();
-        me[i][4]=Instructions[i]->idx;
+        me[i][4]=Instructions[i]->idx / Instructions.size();
         for(int j=i+1;j<Instructions.size();j+=1){
             if(Kites::Reorder::Edge(Instructions[i],Instructions[j])){
                 adj[i][j]=Kites::Reorder::Nops_Needed(Instructions[i],Instructions[j],p)+1;
@@ -105,7 +106,7 @@ void HeuristicRL1(
     std::vector<std::vector<int>> me(Instructions.size(),std::vector<int>(5,0));
     ::Ml_Data(Instructions,adj,me,p);
 
-    std::ofstream out("ml/input_adj.bin",std::ios::binary);
+    std::ofstream out("/tmp/ml/input_adj.bin",std::ios::binary);
     int n=Instructions.size();
     out.write(reinterpret_cast<const char*>(&n),sizeof(int));
     for(int i=0;i<Instructions.size();i+=1){
@@ -115,7 +116,7 @@ void HeuristicRL1(
     out.close();
 
 
-    std::ofstream out2("ml/input_me.bin",std::ios::binary);
+    std::ofstream out2("/tmp/ml/input_me.bin",std::ios::binary);
     for(int i=0;i<Instructions.size();i+=1){
         out2.write(reinterpret_cast<const char*>(me[i].data()),me[i].size()*sizeof(int));
     }
@@ -134,7 +135,7 @@ void HeuristicRL2(
     std::vector<std::map<int,int> > &destinations,
     Proc p
 ){
-    std::ifstream in("ml/priority_out.bin",std::ios::binary);
+    std::ifstream in("/tmp/ml/priority_out.bin",std::ios::binary);
 
     if(in.is_open()){
         std::vector<double> priotities(Instructions.size());
@@ -146,4 +147,51 @@ void HeuristicRL2(
     }
     else{std::cerr<<"OUtput of model not found\n";}
 }
+
+void HeuristicRL(
+    std::vector<struct Instruction_Node *> &Instructions,
+    std::vector<std::map<int,int> > &sources,
+    std::vector<std::map<int,int> > &destinations,
+    Proc p
+){
+    std::vector<std::vector<int>> adj(Instructions.size(),std::vector<int>(Instructions.size(),0));
+    std::vector<std::vector<int>> me(Instructions.size(),std::vector<int>(5,0));
+    ::Ml_Data(Instructions,adj,me,p);
+	std::filesystem::create_directory("/tmp/rl_run");
+    std::ofstream out("/tmp/rl_run/input_adj.bin",std::ios::binary);
+    int n=Instructions.size();
+    out.write(reinterpret_cast<const char*>(&n),sizeof(int));
+    for(int i=0;i<Instructions.size();i+=1){
+        out.write(reinterpret_cast<const char*>(adj[i].data()),adj[i].size()*sizeof(int));
+    }
+
+    out.close();
+
+
+    std::ofstream out2("/tmp/rl_run/input_me.bin",std::ios::binary);
+    for(int i=0;i<Instructions.size();i+=1){
+        out2.write(reinterpret_cast<const char*>(me[i].data()),me[i].size()*sizeof(int));
+    }
+
+    out2.close();
+
+	int RL_status=std::system("python3 ./src/reorder/rl_heuristic.py");
+
+	if(RL_status){
+		std::cerr<<"RL model error\n";
+	}
+
+	std::ifstream in("/tmp/rl_run/priority_out.bin",std::ios::binary);
+
+    if(in.is_open()){
+        std::vector<double> priotities(Instructions.size());
+        in.read(reinterpret_cast<char *>(priotities.data()),Instructions.size()*sizeof(double));
+        in.close();
+        for(int i=0;i<Instructions.size();i+=1){
+            Instructions[i]->priority=priotities[i];
+        }
+    }
+    else{std::cerr<<"OUtput of model not found\n";}
+}
+
 } // na

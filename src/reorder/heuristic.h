@@ -44,5 +44,11 @@ void HeuristicRL2(
     std::vector<std::map<int,int> >&destinations,
     Proc p
 );
+void HeuristicRL(
+    std::vector<struct Instruction_Node *> &Instructions,
+    std::vector<std::map<int,int> > &sources,
+    std::vector<std::map<int,int> > &destinations,
+    Proc p
+);
 }
 #endif
