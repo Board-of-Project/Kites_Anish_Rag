@@ -7,7 +7,7 @@ def relu(x):
 
 def me_to_id_all(me, adj, children_to_ctx):
 	n = len(me)
-	ids = np.concatenate([me, np.zeros((n, 59))], axis=1)
+	ids = np.concatenate([me, np.zeros((n, 11))], axis=1)
 	for i in range(n - 1, -1, -1):
 		w = adj[i]; mask = w > 0
 		if mask.any():

@@ -107,7 +107,7 @@ void HeuristicRL1(
     ::Ml_Data(Instructions,adj,me,p);
 
 	std::filesystem::create_directory("/tmp/ml");
-    std::ofstream out("ml/input_adj.bin",std::ios::binary);
+    std::ofstream out("/tmp/ml/input_adj.bin",std::ios::binary);
     int n=Instructions.size();
     out.write(reinterpret_cast<const char*>(&n),sizeof(int));
     for(int i=0;i<Instructions.size();i+=1){
@@ -117,7 +117,7 @@ void HeuristicRL1(
     out.close();
 
 
-    std::ofstream out2("ml/input_me.bin",std::ios::binary);
+    std::ofstream out2("/tmp/ml/input_me.bin",std::ios::binary);
     for(int i=0;i<Instructions.size();i+=1){
         out2.write(reinterpret_cast<const char*>(me[i].data()),me[i].size()*sizeof(int));
     }
@@ -136,7 +136,7 @@ void HeuristicRL2(
     std::vector<std::map<int,int> > &destinations,
     Proc p
 ){
-    std::ifstream in("ml/priority_out.bin",std::ios::binary);
+    std::ifstream in("/tmp/ml/priority_out.bin",std::ios::binary);
 
     if(in.is_open()){
         std::vector<double> priotities(Instructions.size());
