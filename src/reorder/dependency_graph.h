@@ -17,7 +17,7 @@ struct Instruction_Node {
     // ---- stored fields ----
     uint32_t instr = 0;          // raw encoding
     int32_t  idx = 0;
-    double  priority = 0.0L;
+    std::vector<double> priority;
     int32_t  expected_index = 0;
     int32_t  last_touched_s1 = -1;
     bool branch_flag;

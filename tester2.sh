@@ -21,7 +21,7 @@
 set -u
 
 ITERATIONS=""
-GENERATOR="./rand_gen {out} {seed}"
+GENERATOR="./rand_gen2 {out} {seed}"
 GEN_SOURCE=""
 LENGTH=""
 KITES="./build/kites-cli"

@@ -249,7 +249,7 @@ void Update_Children(
 }
 
 // schedules the instructions and stores in the array passed
-void Scheduler(std::vector<int>&Final_Instructions, const std::vector<uint32_t>&Hexcodes,Kites::Reorder::Proc processor,Kites::Reorder::HeuristicEntry H) {
+void Scheduler(std::vector<int>&Final_Instructions, const std::vector<uint32_t>&Hexcodes,Kites::Reorder::Proc processor,std::vector<Kites::Reorder::HeuristicEntry> H) {
     // std::vector<struct Instruction_Node *> Instructions;
     // Read_File(Instructions);
 	std::vector <std::vector <struct Instruction_Node*>> Instruction_blocks;
@@ -282,7 +282,8 @@ void Scheduler(std::vector<int>&Final_Instructions, const std::vector<uint32_t>&
 		Make_Graph(Instructions,sources,destinations,load_stores);
 
 		//Heuristic of choice
-    	H.fn(Instructions,sources,destinations,processor);
+        for(HeuristicEntry F : H){
+    	F.fn(Instructions,sources,destinations,processor);}
 
 		std::priority_queue<struct Instruction_Node *,std::vector<struct Instruction_Node *>,Compare_Instructions> Priority_List;
 		std::set<struct Instruction_Node *> Wait_List;

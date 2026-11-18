@@ -37,6 +37,6 @@ void Update_Children(
     int Executed_Including_Nop,
     Kites::Reorder::Proc p
 );
-void Scheduler(std::vector<int>&Final_Instructions,const std::vector<uint32_t>&Hexcodes,Kites::Reorder::Proc processor,Kites::Reorder::HeuristicEntry H);
+void Scheduler(std::vector<int>&Final_Instructions,const std::vector<uint32_t>&Hexcodes,Kites::Reorder::Proc processor,std::vector<Kites::Reorder::HeuristicEntry> H);
 }
 #endif

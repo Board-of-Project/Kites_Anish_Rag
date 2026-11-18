@@ -79,7 +79,7 @@ void Heuristic1(
     std::vector<int> Dependecies(n, -1);
     for(int i = 0; i < Instructions.size(); i += 1) {
         // Explicit qualification if Subtree is outside the namespace
-        Instructions[i]->priority = (double)(::Subtree(Dependecies, Instructions, sources, destinations, i, p));
+        Instructions[i]->priority.push_back((double)(::Subtree(Dependecies, Instructions, sources, destinations, i, p)));
     }
 }
 
@@ -92,7 +92,7 @@ void Heuristic2(
 ) {
     int n = Instructions.size();
     for(int i = 0; i < Instructions.size(); i += 1) {
-        Instructions[i]->priority =(double)( n - (Instructions[i]->idx));
+        Instructions[i]->priority.push_back((double)( n - (Instructions[i]->idx)));
     }
 }
 
@@ -125,7 +125,7 @@ void HeuristicRL1(
     out2.close();
 
     for(int i=0;i<Instructions.size();i+=1){
-        Instructions[i]->priority=0.0L;
+        Instructions[i]->priority.push_back(0.0L);
     }
 }
 
@@ -143,7 +143,7 @@ void HeuristicRL2(
         in.read(reinterpret_cast<char *>(priotities.data()),Instructions.size()*sizeof(double));
         in.close();
         for(int i=0;i<Instructions.size();i+=1){
-            Instructions[i]->priority=priotities[i];
+            Instructions[i]->priority.push_back(priotities[i]);
         }
     }
     else{std::cerr<<"OUtput of model not found\n";}
@@ -189,10 +189,21 @@ void HeuristicRL(
         in.read(reinterpret_cast<char *>(priotities.data()),Instructions.size()*sizeof(double));
         in.close();
         for(int i=0;i<Instructions.size();i+=1){
-            Instructions[i]->priority=priotities[i];
+            Instructions[i]->priority.push_back(priotities[i]);
         }
     }
     else{std::cerr<<"OUtput of model not found\n";}
+}
+
+void HeuristicNull(
+    std::vector<struct Instruction_Node *> &Instructions,
+    std::vector<std::map<int,int> > &sources,
+    std::vector<std::map<int,int> > &destinations,
+    Proc p
+){
+    for(struct Instruction_Node * I:Instructions){
+        I->priority.push_back(0.0L);
+    }
 }
 
 } // na

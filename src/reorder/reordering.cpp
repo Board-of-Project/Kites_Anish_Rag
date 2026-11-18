@@ -23,7 +23,8 @@ const HeuristicEntry kHeuristics[] = {
     {"Index", &(Kites::Reorder::Heuristic2)},
     {"RL model dummy",&(Kites::Reorder::HeuristicRL1)},
     {"RL model dummy",&(Kites::Reorder::HeuristicRL2)},
-    {"RL model",&(Kites::Reorder::HeuristicRL)}
+    {"RL model",&(Kites::Reorder::HeuristicRL)},
+    {"No Heuristic(all 0 priority)",&(Kites::Reorder::HeuristicNull)}
 };
 constexpr size_t kHeuristicCount = sizeof(kHeuristics) / sizeof(kHeuristics[0]);
 
