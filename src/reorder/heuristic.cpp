@@ -91,14 +91,14 @@ void Ml_Data(
     Kites::Reorder::Proc p
 ){
     for(int i=0;i<Instructions.size();i+=1){
-        me[i][0]=(int)(Instructions[i]->Type());
-        me[i][1]=Instructions[i]->s1();
-        me[i][2]=Instructions[i]->s2();
-        me[i][3]=Instructions[i]->d();
-        me[i][4]=Instructions[i]->idx;
+        me[i][0]=Instructions[i]->s1();
+        me[i][1]=Instructions[i]->s2();
+        me[i][2]=Instructions[i]->d();
+        me[i][3]=0;
         for(int j=i+1;j<Instructions.size();j+=1){
             if(Kites::Reorder::Edge(Instructions[i],Instructions[j])){
                 adj[i][j]=Kites::Reorder::Nops_Needed(Instructions[i],Instructions[j],p)+1;
+                me[i][3]+=1;
             }
         }
     }
@@ -141,7 +141,7 @@ void HeuristicRL1(
     Proc p
 ){
     std::vector<std::vector<int>> adj(Instructions.size(),std::vector<int>(Instructions.size(),0));
-    std::vector<std::vector<int>> me(Instructions.size(),std::vector<int>(5,0));
+    std::vector<std::vector<int>> me(Instructions.size(),std::vector<int>(4,0));
     ::Ml_Data(Instructions,adj,me,p);
 
 	std::filesystem::create_directory("/tmp/ml");
@@ -195,7 +195,7 @@ void HeuristicRL(
     Proc p
 ){
     std::vector<std::vector<int>> adj(Instructions.size(),std::vector<int>(Instructions.size(),0));
-    std::vector<std::vector<int>> me(Instructions.size(),std::vector<int>(5,0));
+    std::vector<std::vector<int>> me(Instructions.size(),std::vector<int>(4,0));
     ::Ml_Data(Instructions,adj,me,p);
 	std::filesystem::create_directory("/tmp/rl_run");
     std::ofstream out("/tmp/rl_run/input_adj.bin",std::ios::binary);
