@@ -17,6 +17,7 @@
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <QSplitter>
+#include <QTabWidget>
 #include <QVBoxLayout>
 #include <QtConcurrent/QtConcurrent>
 
@@ -26,379 +27,389 @@
 
 namespace Kites
 {
-    namespace
-    {
-        struct ProcessorChoice
-        {
-            const char *label;
-            ProcessorType type;
-        };
-        const ProcessorChoice kProcessors[] = {
-            {"Single cycle (RVSS)", ProcessorType::RVSS},
-            {"5-stage: no hazard detection, no forwarding", ProcessorType::RV5Stage_NH_NF},
-            {"5-stage: hazard detection, no forwarding", ProcessorType::RV5Stage_H_NF},
-            {"5-stage: no hazard detection, forwarding", ProcessorType::RV5Stage_NH_F},
-            {"5-stage: hazard detection, forwarding", ProcessorType::RV5Stage_H_F},
-        };
-    } // namespace
+namespace
+{
+struct ProcessorChoice
+{
+    const char *label;
+    ProcessorType type;
+};
+const ProcessorChoice kProcessors[] = {
+    {"Single cycle (RVSS)", ProcessorType::RVSS},
+    {"5-stage: no hazard detection, no forwarding", ProcessorType::RV5Stage_NH_NF},
+    {"5-stage: hazard detection, no forwarding", ProcessorType::RV5Stage_H_NF},
+    {"5-stage: no hazard detection, forwarding", ProcessorType::RV5Stage_NH_F},
+    {"5-stage: hazard detection, forwarding", ProcessorType::RV5Stage_H_F},
+};
+} // namespace
 
-    ReorderTab::ReorderTab(QWidget *parent, EditorTab *editor, ProcessorManager *vmManager)
+ReorderTab::ReorderTab(QWidget *parent, EditorTab *editor, ProcessorManager *vmManager)
     : KitesTab(parent), m_editor(editor), m_vmManager(vmManager)
+{
+    m_processorBox = new QComboBox(this);
+    for (const auto &p : kProcessors)
     {
-        m_processorBox = new QComboBox(this);
-        for (const auto &p : kProcessors)
-        {
-            m_processorBox->addItem(p.label, static_cast<int>(p.type));
-        }
-
-        // Comma-separated heuristic indices, e.g. "0,2,3". Together they form each instruction's
-        // priority vector (first = most significant).
-        m_heuristicEdit = new QLineEdit(this);
-        m_heuristicEdit->setText("0");
-        m_heuristicEdit->setMinimumWidth(160);
-        m_heuristicEdit->setClearButtonEnabled(true);
-        m_heuristicEdit->setPlaceholderText("e.g. 0,2,3");
-        {
-            QString help = "Enter heuristic indices separated by commas. They form the priority "
-            "vector (first = most significant).\n\nAvailable heuristics:";
-            const auto &names = reorder::heuristicNames();
-            for (size_t i = 0; i < names.size(); ++i)
-            {
-                help += QString("\n  %1: %2").arg(i).arg(QString::fromStdString(names[i]));
-            }
-            m_heuristicEdit->setToolTip(help);
-        }
-
-        // Always-visible list of the available heuristics (index: name), built from the same table
-        // the algorithm uses so it can never go out of sync.
-        {
-            const auto &names = reorder::heuristicNames();
-            QStringList entries;
-            for (size_t i = 0; i < names.size(); ++i)
-            {
-                entries << QString("<b>%1</b>: %2").arg(i).arg(QString::fromStdString(names[i]).toHtmlEscaped());
-            }
-            m_heuristicList = new QLabel(this);
-            m_heuristicList->setTextFormat(Qt::RichText);
-            m_heuristicList->setWordWrap(true);
-            m_heuristicList->setTextInteractionFlags(Qt::TextSelectableByMouse);
-            m_heuristicList->setText("Available heuristics &mdash; " + entries.join(" &nbsp;|&nbsp; "));
-        }
-
-        m_runButton = new QPushButton("Reorder", this);
-        m_status = new QLabel(this);
-
-        auto *controls = new QHBoxLayout;
-        controls->addWidget(new QLabel("Processor:", this));
-        controls->addWidget(m_processorBox);
-        controls->addWidget(new QLabel("Heuristics:", this));
-        controls->addWidget(m_heuristicEdit);
-        controls->addWidget(m_runButton);
-        controls->addWidget(m_status, 1);
-
-        m_summary = new QLabel(this);
-        QFont summaryFont = m_summary->font();
-        summaryFont.setBold(true);
-        m_summary->setFont(summaryFont);
-
-        const QFont mono = QFontDatabase::systemFont(QFontDatabase::FixedFont);
-        auto makeView = [&]()
-        {
-            auto *view = new QPlainTextEdit(this);
-            view->setReadOnly(true); // still selectable / copyable with Ctrl+C
-            view->setLineWrapMode(QPlainTextEdit::NoWrap);
-            view->setFont(mono);
-            return view;
-        };
-        m_originalView = makeView();
-        m_reorderedView = makeView();
-        m_originalStats = new QLabel(this);
-        m_reorderedStats = new QLabel(this);
-
-        m_copyAsmButton = new QPushButton("Copy assembly", this);
-        m_copyHexButton = new QPushButton("Copy hex", this);
-        m_copyAsmButton->setEnabled(false);
-        m_copyHexButton->setEnabled(false);
-        m_verifyLabel = new QLabel(this);
-        m_verifyLabel->setWordWrap(true);
-
-        auto makePane = [&](const QString &title, QLabel *stats, QPlainTextEdit *view,
-                            QLayout *footer)
-        {
-            auto *pane = new QWidget(this);
-            auto *layout = new QVBoxLayout(pane);
-            layout->setContentsMargins(0, 0, 0, 0);
-            layout->addWidget(new QLabel(title, pane));
-            layout->addWidget(stats);
-            layout->addWidget(view, 1);
-            if (footer)
-            {
-                layout->addLayout(footer);
-            }
-            return pane;
-        };
-
-        auto *copyRow = new QHBoxLayout;
-        copyRow->addWidget(m_copyAsmButton);
-        copyRow->addWidget(m_copyHexButton);
-        copyRow->addWidget(m_verifyLabel, 1);
-
-        auto *splitter = new QSplitter(Qt::Horizontal, this);
-        splitter->addWidget(makePane("Original code", m_originalStats, m_originalView, nullptr));
-        splitter->addWidget(makePane("Reordered code", m_reorderedStats, m_reorderedView, copyRow));
-        splitter->setStretchFactor(0, 1);
-        splitter->setStretchFactor(1, 1);
-
-        auto *root = new QVBoxLayout(this);
-        root->addLayout(controls);
-        root->addWidget(m_heuristicList);
-        root->addWidget(m_summary);
-        root->addWidget(splitter, 1);
-
-        connect(m_runButton, &QPushButton::clicked, this, &ReorderTab::onReorderClicked);
-        connect(m_heuristicEdit, &QLineEdit::returnPressed, this, &ReorderTab::onReorderClicked);
-        connect(m_copyAsmButton, &QPushButton::clicked, this, &ReorderTab::onCopyAssembly);
-        connect(m_copyHexButton, &QPushButton::clicked, this, &ReorderTab::onCopyHex);
-        connect(&m_simWatcher, &QFutureWatcher<SimPair>::finished, this,
-                &ReorderTab::onSimulationFinished);
-        syncProcessorFromManager();
+        m_processorBox->addItem(p.label, static_cast<int>(p.type));
     }
 
-    ReorderTab::~ReorderTab()
+    // Comma-separated heuristic indices, e.g. "0,2,3". Together they form each instruction's
+    // priority vector (first = most significant).
+    m_heuristicEdit = new QLineEdit(this);
+    m_heuristicEdit->setText("0");
+    m_heuristicEdit->setMinimumWidth(160);
+    m_heuristicEdit->setClearButtonEnabled(true);
+    m_heuristicEdit->setPlaceholderText("e.g. 0,2,3");
     {
-        m_simWatcher.waitForFinished(); // the worker only uses copies, but don't outlive the tab
+        QString help = "Enter heuristic indices separated by commas. They form the priority "
+                       "vector (first = most significant).\n\nAvailable heuristics:";
+        const auto &names = reorder::heuristicNames();
+        for (size_t i = 0; i < names.size(); ++i)
+        {
+            help += QString("\n  %1: %2").arg(i).arg(QString::fromStdString(names[i]));
+        }
+        m_heuristicEdit->setToolTip(help);
     }
 
-    void ReorderTab::syncProcessorFromManager()
+    // Always-visible list of the available heuristics (index: name), built from the same table
+    // the algorithm uses so it can never go out of sync.
     {
-        if (!m_vmManager)
+        const auto &names = reorder::heuristicNames();
+        QStringList entries;
+        for (size_t i = 0; i < names.size(); ++i)
         {
-            return;
+            entries << QString("<b>%1</b>: %2").arg(i).arg(QString::fromStdString(names[i]).toHtmlEscaped());
         }
-        const int idx = m_processorBox->findData(static_cast<int>(m_vmManager->getProcessorType()));
-        if (idx >= 0)
-        {
-            m_processorBox->setCurrentIndex(idx);
-        }
+        m_heuristicList = new QLabel(this);
+        m_heuristicList->setTextFormat(Qt::RichText);
+        m_heuristicList->setWordWrap(true);
+        m_heuristicList->setTextInteractionFlags(Qt::TextSelectableByMouse);
+        m_heuristicList->setText("Available heuristics &mdash; " + entries.join(" &nbsp;|&nbsp; "));
     }
 
-    bool ReorderTab::assembleEditorText(AssembledProgram &program, QString &error)
-    {
-        try
-        {
-            // Same steps MainWindow::tryParseAndLoadProgram() uses, minus loading into the VM.
-            std::string text = m_editor->getRawText();
-            text = customPseudoManager::expandPseudoInstruction(text);
+    m_runButton = new QPushButton("Reorder", this);
+    m_status = new QLabel(this);
 
-            // Own scratch file: don't reuse temporary_assembly_file_path, the VM run path owns it.
-            const std::filesystem::path scratch = globals::vm_state_directory / "reorder_input.s";
-            {
-                std::ofstream out(scratch);
-                out << text;
-            }
-            program = assemble(scratch.string());
-            return true;
-        }
-        catch (const std::exception &e)
+    auto *controls = new QHBoxLayout;
+    controls->addWidget(new QLabel("Processor:", this));
+    controls->addWidget(m_processorBox);
+    controls->addWidget(new QLabel("Heuristics:", this));
+    controls->addWidget(m_heuristicEdit);
+    controls->addWidget(m_runButton);
+    controls->addWidget(m_status, 1);
+
+    m_summary = new QLabel(this);
+    QFont summaryFont = m_summary->font();
+    summaryFont.setBold(true);
+    m_summary->setFont(summaryFont);
+
+    const QFont mono = QFontDatabase::systemFont(QFontDatabase::FixedFont);
+    auto makeView = [&]()
+    {
+        auto *view = new QPlainTextEdit(this);
+        view->setReadOnly(true); // still selectable / copyable with Ctrl+C
+        view->setLineWrapMode(QPlainTextEdit::NoWrap);
+        view->setFont(mono);
+        return view;
+    };
+    m_originalView = makeView();
+    m_reorderedView = makeView();
+    m_originalStats = new QLabel(this);
+    m_reorderedStats = new QLabel(this);
+
+    m_copyAsmButton = new QPushButton("Copy assembly", this);
+    m_copyHexButton = new QPushButton("Copy hex", this);
+    m_copyAsmButton->setEnabled(false);
+    m_copyHexButton->setEnabled(false);
+    m_verifyLabel = new QLabel(this);
+    m_verifyLabel->setWordWrap(true);
+
+    auto makePane = [&](const QString &title, QLabel *stats, QPlainTextEdit *view,
+                        QLayout *footer)
+    {
+        auto *pane = new QWidget(this);
+        auto *layout = new QVBoxLayout(pane);
+        layout->setContentsMargins(0, 0, 0, 0);
+        layout->addWidget(new QLabel(title, pane));
+        layout->addWidget(stats);
+        layout->addWidget(view, 1);
+        if (footer)
         {
-            error = QString::fromStdString(e.what());
-            return false;
+            layout->addLayout(footer);
         }
+        return pane;
+    };
+
+    auto *copyRow = new QHBoxLayout;
+    copyRow->addWidget(m_copyAsmButton);
+    copyRow->addWidget(m_copyHexButton);
+    copyRow->addWidget(m_verifyLabel, 1);
+
+    auto *splitter = new QSplitter(Qt::Horizontal, this);
+    splitter->addWidget(makePane("Original code", m_originalStats, m_originalView, nullptr));
+    splitter->addWidget(makePane("Reordered code", m_reorderedStats, m_reorderedView, copyRow));
+    splitter->setStretchFactor(0, 1);
+    splitter->setStretchFactor(1, 1);
+
+    m_visualView = new ReorderVisualView(this);
+
+    // "Listing": copyable text + cycle stats. "Visualisation": colour-coded shuffle with hover.
+    auto *views = new QTabWidget(this);
+    views->addTab(splitter, "Listing");
+    views->addTab(m_visualView, "Visualisation");
+
+    auto *root = new QVBoxLayout(this);
+    root->addLayout(controls);
+    root->addWidget(m_heuristicList);
+    root->addWidget(m_summary);
+    root->addWidget(views, 1);
+
+    connect(m_runButton, &QPushButton::clicked, this, &ReorderTab::onReorderClicked);
+    connect(m_heuristicEdit, &QLineEdit::returnPressed, this, &ReorderTab::onReorderClicked);
+    connect(m_copyAsmButton, &QPushButton::clicked, this, &ReorderTab::onCopyAssembly);
+    connect(m_copyHexButton, &QPushButton::clicked, this, &ReorderTab::onCopyHex);
+    connect(&m_simWatcher, &QFutureWatcher<SimPair>::finished, this,
+            &ReorderTab::onSimulationFinished);
+    syncProcessorFromManager();
+}
+
+ReorderTab::~ReorderTab()
+{
+    m_simWatcher.waitForFinished(); // the worker only uses copies, but don't outlive the tab
+}
+
+void ReorderTab::syncProcessorFromManager()
+{
+    if (!m_vmManager)
+    {
+        return;
     }
-
-    bool ReorderTab::parseHeuristics(std::vector<std::size_t> &out, QString &error) const
+    const int idx = m_processorBox->findData(static_cast<int>(m_vmManager->getProcessorType()));
+    if (idx >= 0)
     {
-        out.clear();
-        const size_t count = reorder::heuristicNames().size();
-        const QStringList parts = m_heuristicEdit->text().split(',');
-        for (const QString &raw : parts)
+        m_processorBox->setCurrentIndex(idx);
+    }
+}
+
+bool ReorderTab::assembleEditorText(AssembledProgram &program, QString &error)
+{
+    try
+    {
+        // Same steps MainWindow::tryParseAndLoadProgram() uses, minus loading into the VM.
+        std::string text = m_editor->getRawText();
+        text = customPseudoManager::expandPseudoInstruction(text);
+
+        // Own scratch file: don't reuse temporary_assembly_file_path, the VM run path owns it.
+        const std::filesystem::path scratch = globals::vm_state_directory / "reorder_input.s";
         {
-            const QString item = raw.trimmed();
-            bool ok = false;
-            const int value = item.toInt(&ok);
-            if (item.isEmpty() || !ok || value < 0)
-            {
-                error = item.isEmpty() ? QString("Heuristic list has an empty entry.")
-                : QString("'%1' is not a valid heuristic index.").arg(item);
-                return false;
-            }
-            if (static_cast<size_t>(value) >= count)
-            {
-                error = QString("Unknown heuristic %1 (valid: 0..%2).").arg(value).arg(count - 1);
-                return false;
-            }
-            out.push_back(static_cast<size_t>(value));
+            std::ofstream out(scratch);
+            out << text;
         }
+        program = assemble(scratch.string());
         return true;
     }
-
-    QString ReorderTab::formatListing(const std::vector<uint32_t> &words,
-                                      const std::vector<std::string> &lines)
+    catch (const std::exception &e)
     {
-        std::ostringstream out;
-        for (size_t i = 0; i < words.size(); ++i)
+        error = QString::fromStdString(e.what());
+        return false;
+    }
+}
+
+bool ReorderTab::parseHeuristics(std::vector<std::size_t> &out, QString &error) const
+{
+    out.clear();
+    const size_t count = reorder::heuristicNames().size();
+    const QStringList parts = m_heuristicEdit->text().split(',');
+    for (const QString &raw : parts)
+    {
+        const QString item = raw.trimmed();
+        bool ok = false;
+        const int value = item.toInt(&ok);
+        if (item.isEmpty() || !ok || value < 0)
         {
-            out << std::hex << std::setfill('0') << std::setw(8) << (i * 4) << ": " << std::setw(8)
+            error = item.isEmpty() ? QString("Heuristic list has an empty entry.")
+                                   : QString("'%1' is not a valid heuristic index.").arg(item);
+            return false;
+        }
+        if (static_cast<size_t>(value) >= count)
+        {
+            error = QString("Unknown heuristic %1 (valid: 0..%2).").arg(value).arg(count - 1);
+            return false;
+        }
+        out.push_back(static_cast<size_t>(value));
+    }
+    return true;
+}
+
+QString ReorderTab::formatListing(const std::vector<uint32_t> &words,
+                                  const std::vector<std::string> &lines)
+{
+    std::ostringstream out;
+    for (size_t i = 0; i < words.size(); ++i)
+    {
+        out << std::hex << std::setfill('0') << std::setw(8) << (i * 4) << ": " << std::setw(8)
             << words[i] << std::dec << std::setfill(' ') << "   "
             << (i < lines.size() && !lines[i].empty() ? lines[i] : "(no text available)")
             << "\n";
-        }
-        return QString::fromStdString(out.str());
+    }
+    return QString::fromStdString(out.str());
+}
+
+QString ReorderTab::statsText(const reorder_tab::SimResult &r)
+{
+    if (!r.error.empty())
+    {
+        return "Run error: " + QString::fromStdString(r.error);
+    }
+    const double cpi = r.retired ? static_cast<double>(r.cycles) / r.retired : 0.0;
+    QString text = QString("Cycles: %1    Instructions retired: %2    CPI: %3")
+                       .arg(r.cycles)
+                       .arg(r.retired)
+                       .arg(cpi, 0, 'f', 2);
+    if (!r.note.empty())
+    {
+        text += "    (" + QString::fromStdString(r.note) + ")";
+    }
+    return text;
+}
+
+void ReorderTab::onReorderClicked()
+{
+    if (!m_runButton->isEnabled())
+    {
+        return; // a simulation is still running (e.g. Enter pressed in the heuristics box)
+    }
+    std::vector<std::size_t> heuristics;
+    QString error;
+    if (!parseHeuristics(heuristics, error))
+    {
+        m_status->setText("Invalid heuristics: " + error);
+        return;
     }
 
-    QString ReorderTab::statsText(const reorder_tab::SimResult &r)
+    AssembledProgram program;
+    if (!assembleEditorText(program, error))
     {
-        if (!r.error.empty())
-        {
-            return "Run error: " + QString::fromStdString(r.error);
-        }
-        const double cpi = r.retired ? static_cast<double>(r.cycles) / r.retired : 0.0;
-        QString text = QString("Cycles: %1    Instructions retired: %2    CPI: %3")
-        .arg(r.cycles)
-        .arg(r.retired)
-        .arg(cpi, 0, 'f', 2);
-        if (!r.note.empty())
-        {
-            text += "    (" + QString::fromStdString(r.note) + ")";
-        }
-        return text;
+        m_status->setText("Assembly failed: " + error);
+        return;
     }
 
-    void ReorderTab::onReorderClicked()
+    const std::vector<uint32_t> &original = program.text_buffer;
+    const reorder_tab::Listing originalListing = reorder_tab::buildListing(program, original);
+    m_originalView->setPlainText(formatListing(original, originalListing.lines));
+    m_visualView->clear();
+    m_reorderedView->clear();
+    m_originalStats->clear();
+    m_reorderedStats->clear();
+    m_summary->clear();
+    m_verifyLabel->clear();
+    m_copyAsmButton->setEnabled(false);
+    m_copyHexButton->setEnabled(false);
+
+    const auto processor = static_cast<ProcessorType>(m_processorBox->currentData().toInt());
+    std::vector<uint32_t> result;
+    std::vector<std::size_t> originalIndex; // originalIndex[k] = where reordered word k came from
+    try
     {
-        if (!m_runButton->isEnabled())
-        {
-            return; // a simulation is still running (e.g. Enter pressed in the heuristics box)
-        }
-        std::vector<std::size_t> heuristics;
-        QString error;
-        if (!parseHeuristics(heuristics, error))
-        {
-            m_status->setText("Invalid heuristics: " + error);
-            return;
-        }
+        // Run the algorithm on the UI thread. Move it to a worker if it gets slow.
+        result = reorder::reorderProgram(original, processor, heuristics, &originalIndex);
+    }
+    catch (const std::exception &e)
+    {
+        m_status->setText(QString("Reorder failed: ") + e.what());
+        return;
+    }
+    if (result.size() != original.size())
+    {
+        m_status->setText("Reorder returned a different number of instructions.");
+        return;
+    }
 
-        AssembledProgram program;
-        if (!assembleEditorText(program, error))
-        {
-            m_status->setText("Assembly failed: " + error);
-            return;
-        }
+    // Listing + copyable assembly (verified by assembling it again).
+    m_lastWords = result;
+    m_lastListing = reorder_tab::buildListing(program, result);
+    m_reorderedView->setPlainText(formatListing(result, m_lastListing.lines));
+    m_visualView->setData(originalListing.lines, m_lastListing.lines, originalIndex);
+    m_copyHexButton->setEnabled(true);
 
-        const std::vector<uint32_t> &original = program.text_buffer;
-        m_originalView->setPlainText(
-            formatListing(original, reorder_tab::buildListing(program, original).lines));
-        m_reorderedView->clear();
-        m_originalStats->clear();
-        m_reorderedStats->clear();
-        m_summary->clear();
-        m_verifyLabel->clear();
-        m_copyAsmButton->setEnabled(false);
-        m_copyHexButton->setEnabled(false);
+    std::string why;
+    if (reorder_tab::verifyAssembly(m_lastListing.lines, result, why))
+    {
+        m_verifyLabel->setText("Done can copy assembly");
+        m_copyAsmButton->setEnabled(true);
+    }
+    else
+    {
+        m_verifyLabel->setText(QString("Use Hex Assembly not verified")
+                                   .arg(QString::fromStdString(why)));
+        m_copyAsmButton->setEnabled(m_lastListing.complete); // still copyable, but unchecked
+    }
 
-        const auto processor = static_cast<ProcessorType>(m_processorBox->currentData().toInt());
-        std::vector<uint32_t> result;
-        try
-        {
-            // Run the algorithm on the UI thread. Move it to a worker if it gets slow.
-            result = reorder::reorderProgram(original, processor, heuristics);
-        }
-        catch (const std::exception &e)
-        {
-            m_status->setText(QString("Reorder failed: ") + e.what());
-            return;
-        }
-        if (result.size() != original.size())
-        {
-            m_status->setText("Reorder returned a different number of instructions.");
-            return;
-        }
+    size_t moved = 0;
+    for (size_t i = 0; i < original.size(); ++i)
+    {
+        moved += original[i] != result[i];
+    }
+    m_status->setText(
+        QString("%1 instructions, %2 changed position").arg(original.size()).arg(moved));
 
-        // Listing + copyable assembly (verified by assembling it again).
-        m_lastWords = result;
-        m_lastListing = reorder_tab::buildListing(program, result);
-        m_reorderedView->setPlainText(formatListing(result, m_lastListing.lines));
-        m_copyHexButton->setEnabled(true);
-
-        std::string why;
-        if (reorder_tab::verifyAssembly(m_lastListing.lines, result, why))
+    // Simulate both versions on private VMs in a worker thread (copies only).
+    m_runButton->setEnabled(false);
+    m_summary->setText("Simulating both programs...");
+    AssembledProgram reordered = program;
+    reordered.text_buffer = result;
+    m_simWatcher.setFuture(QtConcurrent::run(
+        [program, reordered, processor]() -> SimPair
         {
-            m_verifyLabel->setText("Done can copy assembly");
-            m_copyAsmButton->setEnabled(true);
-        }
-        else
-        {
-            m_verifyLabel->setText(QString("Use Hex Assembly not verified")
-            .arg(QString::fromStdString(why)));
-            m_copyAsmButton->setEnabled(m_lastListing.complete); // still copyable, but unchecked
-        }
-
-        size_t moved = 0;
-        for (size_t i = 0; i < original.size(); ++i)
-        {
-            moved += original[i] != result[i];
-        }
-        m_status->setText(
-            QString("%1 instructions, %2 changed position").arg(original.size()).arg(moved));
-
-        // Simulate both versions on private VMs in a worker thread (copies only).
-        m_runButton->setEnabled(false);
-        m_summary->setText("Simulating both programs...");
-        AssembledProgram reordered = program;
-        reordered.text_buffer = result;
-        m_simWatcher.setFuture(QtConcurrent::run(
-            [program, reordered, processor]() -> SimPair
-            {
-                return {reorder_tab::simulateProgram(program, processor),
+            return {reorder_tab::simulateProgram(program, processor),
                     reorder_tab::simulateProgram(reordered, processor)};
-            }));
-    }
+        }));
+}
 
-    void ReorderTab::onSimulationFinished()
+void ReorderTab::onSimulationFinished()
+{
+    const SimPair result = m_simWatcher.result();
+    m_runButton->setEnabled(true);
+    m_originalStats->setText(statsText(result.first));
+    m_reorderedStats->setText(statsText(result.second));
+
+    const auto &a = result.first;
+    const auto &b = result.second;
+    if (!a.error.empty() || !b.error.empty())
     {
-        const SimPair result = m_simWatcher.result();
-        m_runButton->setEnabled(true);
-        m_originalStats->setText(statsText(result.first));
-        m_reorderedStats->setText(statsText(result.second));
-
-        const auto &a = result.first;
-        const auto &b = result.second;
-        if (!a.error.empty() || !b.error.empty())
-        {
-            m_summary->setText("Could not compare cycles: a program raised a run error.");
-            return;
-        }
-        if (!a.finished || !b.finished)
-        {
-            m_summary->setText("Cycle comparison may be incomplete: a program did not finish.");
-            return;
-        }
-        const long long saved = static_cast<long long>(a.cycles) - static_cast<long long>(b.cycles);
-        if (saved == 0)
-        {
-            m_summary->setText(QString("Same cycle count: %1").arg(a.cycles));
-        }
-        else
-        {
-            const double percent = a.cycles ? 100.0 * std::abs(saved) / a.cycles : 0.0;
-            m_summary->setText(QString("Reordered program is %1 cycles %2 (%3%)")
-            .arg(std::abs(saved))
-            .arg(saved > 0 ? "faster" : "slower")
-            .arg(percent, 0, 'f', 1));
-        }
+        m_summary->setText("Could not compare cycles: a program raised a run error.");
+        return;
     }
-
-    void ReorderTab::onCopyAssembly()
+    if (!a.finished || !b.finished)
     {
-        QGuiApplication::clipboard()->setText(
-            QString::fromStdString(reorder_tab::joinLines(m_lastListing.lines)));
-        m_status->setText(QString("Copied %1 lines of assembly").arg(m_lastListing.lines.size()));
+        m_summary->setText("Cycle comparison may be incomplete: a program did not finish.");
+        return;
     }
-
-    void ReorderTab::onCopyHex()
+    const long long saved = static_cast<long long>(a.cycles) - static_cast<long long>(b.cycles);
+    if (saved == 0)
     {
-        QGuiApplication::clipboard()->setText(
-            QString::fromStdString(reorder_tab::joinHex(m_lastWords)));
-        m_status->setText(QString("Copied %1 hex words").arg(m_lastWords.size()));
+        m_summary->setText(QString("Same cycle count: %1").arg(a.cycles));
     }
+    else
+    {
+        const double percent = a.cycles ? 100.0 * std::abs(saved) / a.cycles : 0.0;
+        m_summary->setText(QString("Reordered program is %1 cycles %2 (%3%)")
+                               .arg(std::abs(saved))
+                               .arg(saved > 0 ? "faster" : "slower")
+                               .arg(percent, 0, 'f', 1));
+    }
+}
+
+void ReorderTab::onCopyAssembly()
+{
+    QGuiApplication::clipboard()->setText(
+        QString::fromStdString(reorder_tab::joinLines(m_lastListing.lines)));
+    m_status->setText(QString("Copied %1 lines of assembly").arg(m_lastListing.lines.size()));
+}
+
+void ReorderTab::onCopyHex()
+{
+    QGuiApplication::clipboard()->setText(
+        QString::fromStdString(reorder_tab::joinHex(m_lastWords)));
+    m_status->setText(QString("Copied %1 hex words").arg(m_lastWords.size()));
+}
 } // namespace Kites

@@ -3,6 +3,7 @@
 #include "common/assembled_program.h"
 #include "processor/processor_types.h"
 #include "reorder_listing.h"
+#include "reorder_visual.h"
 #include "reorder_sim.h"
 #include "ui/common/kitestab.h"
 
@@ -20,18 +21,18 @@ class QPushButton;
 
 namespace Kites
 {
-  class EditorTab;
-  class ProcessorManager;
+class EditorTab;
+class ProcessorManager;
 
-  /**
-   * @brief Tab with the original program on the left and the reordered program on the right.
-   *
-   * Flow on "Reorder": editor text -> expand pseudo instructions -> assemble() -> reorder the
-   * machine words -> list both versions -> simulate both on private VMs and show their cycles.
-   * Nothing here touches the main VM, so the main program state is never disturbed.
-   */
-  class ReorderTab : public KitesTab
-  {
+/**
+ * @brief Tab with the original program on the left and the reordered program on the right.
+ *
+ * Flow on "Reorder": editor text -> expand pseudo instructions -> assemble() -> reorder the
+ * machine words -> list both versions -> simulate both on private VMs and show their cycles.
+ * Nothing here touches the main VM, so the main program state is never disturbed.
+ */
+class ReorderTab : public KitesTab
+{
     Q_OBJECT
 
   public:
@@ -74,11 +75,12 @@ namespace Kites
     QLabel *m_verifyLabel = nullptr;
     QPlainTextEdit *m_originalView = nullptr;
     QPlainTextEdit *m_reorderedView = nullptr;
+    ReorderVisualView *m_visualView = nullptr; ///< gradient-coloured side-by-side shuffle view
 
     QFutureWatcher<SimPair> m_simWatcher;
 
     // result of the last successful reorder, used by the copy buttons
     std::vector<uint32_t> m_lastWords;
     reorder_tab::Listing m_lastListing;
-  };
+};
 } // namespace Kites
