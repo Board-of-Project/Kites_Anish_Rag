@@ -136,8 +136,9 @@ void HeuristicRL2(
     std::vector<std::map<int,int> > &destinations,
     Proc p
 ){
-    std::ifstream in("/tmp/ml/priority_out.bin",std::ios::binary);
-
+    std::ifstream in("./ml/priority_out.bin",std::ios::binary);
+    std::filesystem::path cur=".";
+    //std::cout<<cur.filename().string()<<"\n";
     if(in.is_open()){
         std::vector<double> priotities(Instructions.size());
         in.read(reinterpret_cast<char *>(priotities.data()),Instructions.size()*sizeof(double));
