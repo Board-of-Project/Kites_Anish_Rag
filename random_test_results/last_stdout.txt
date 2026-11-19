@@ -1,1 +1,0 @@
-MATCH heuristic 1 (Index) [cycles 314 -> 296]

@@ -1,52 +1,53 @@
-# rand_gen3 seed=785932797 length=50 baseAddr=3904
+# rand_gen3 seed=587455322 length=50 baseAddr=3904
     li s11, 3904
-    li s5, 243
-    li a2, 2147483647
-    sub a4, s5, a2
-    li a3, 1
-    li s0, -2147483648
-    and a1, a3, s0
-    li s7, 1
-    li s3, -2147483648
-    xori t5, s7, 1670
-    ld t1, 248(s11)
-    xori t1, t1, 367
-    sd t1, 248(s11)
-    li s2, 0
-    li t6, 12
-    add s6, s2, t6
-    srli a7, s6, 6
-    sltu a5, a7, a7
-    srl t2, a5, s6
-    srl a3, t2, s6
-    sll t3, a3, s6
-    ld a6, 248(s11)
-    slli a0, a6, 29
-    ld s1, 176(s11)
-    ld a4, 120(s11)
-    sll s0, s1, a4
-    addi s3, t3, -882
-    and t4, s3, a3
-    add a2, t4, t4
-    sd t3, 208(s11)
-    sd a2, 216(s11)
-    sd a6, 224(s11)
-    sd s3, 424(s11)
-    sd s1, 432(s11)
-    sd t4, 440(s11)
-    andi t1, t4, -206
-    sra t5, t3, a4
-    add s6, t1, t5
-    sll t2, t1, s1
-    xori t6, t2, 1769
-    or a5, t6, t6
-    srai t0, a5, 13
-    lwu s4, 272(s11)
-    slt a3, s4, t0
-    add s0, a3, a3
-    srli a7, s0, 15
-    srai s1, a7, 28
-    lwu a0, 260(s11)
-    lw s5, 392(s11)
-    sra a0, a0, s5
-    addi a0, a0, 324
+    li s8, -1
+    li s2, 165
+    slli a4, s8, 10
+    li t5, 1284
+    li t1, 1
+    or a0, t5, t1
+    lw s1, 432(s11)
+    xori s7, s1, -723
+    add s3, s7, s7
+    addi a1, s3, 1077
+    add s4, s3, a0
+    andi t2, s4, 617
+    slt s6, t2, s3
+    addi t6, s6, -1671
+    and s0, t6, t6
+    srai s3, s0, 12
+    lw a5, 144(s11)
+    slli s5, a5, 1
+    sra t0, s5, s5
+    slt s8, t0, s0
+    sw s5, 196(s11)
+    sw s8, 200(s11)
+    li t1, 0
+    li a4, 0
+    xori t3, t1, -1335
+    lh a3, 22(s11)
+    lhu a2, 334(s11)
+    sltu a0, a3, a2
+    or a0, a0, s3
+    lw t6, 284(s11)
+    lw s1, 452(s11)
+    xor s0, t6, s1
+    sh a0, 416(s11)
+    sh s8, 418(s11)
+    sh s0, 124(s11)
+    sh a4, 126(s11)
+    sh a0, 128(s11)
+    sh s8, 130(s11)
+    sh t3, 78(s11)
+    sh t6, 80(s11)
+    sh t1, 82(s11)
+    lh s4, 276(s11)
+    lb a6, 112(s11)
+    xor s4, s4, a6
+    lh t2, 362(s11)
+    lw s3, 184(s11)
+    add s8, t2, s3
+    sw a0, 472(s11)
+    sw s0, 476(s11)
+    sw a3, 480(s11)
+    sw s4, 484(s11)
