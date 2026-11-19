@@ -21,7 +21,7 @@ adjmatrix=raw_data[1:].reshape((num_instructions,num_instructions)).astype(np.fl
 me=np.fromfile("/tmp/rl_run/input_me.bin",dtype=np.int32)
 me_vector = me.reshape((num_instructions,5)).astype(np.float32) # num_inst x 5 in og order
 
-with open("./src/reorder/Weights.pkl", "rb") as f:
+with open("./src/reorder/Weights_short_latestgen.pkl", "rb") as f:
 	save_data = pickle.load(f)
 children_to_ctx = save_data["children_to_ctx"].copy()
 W1 = save_data["W1"].copy()

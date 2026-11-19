@@ -22,22 +22,60 @@ int Subtree(
         for(int i=index+1;i<Instructions.size();i+=1){
             //waw reg
             if(Instructions[i]->d()==Instructions[index]->d()&&Instructions[index]->d()!=-1){
-                ans+=Subtree(Dependencies,Instructions,sources,destinations,i,processor)+Kites::Reorder::Nops_Needed(Instructions[index],Instructions[i],processor);
+                ans+=Subtree(Dependencies,Instructions,sources,destinations,i,processor)+Kites::Reorder::Nops_Needed(Instructions[index],Instructions[i],processor)+1;
             }
             //war reg
             else if(Instructions[index]->s1()==Instructions[i]->d()&&Instructions[index]->s1()!=-1){
-                ans+=Subtree(Dependencies,Instructions,sources,destinations,i,processor)+Kites::Reorder::Nops_Needed(Instructions[index],Instructions[i],processor);
+                ans+=Subtree(Dependencies,Instructions,sources,destinations,i,processor)+Kites::Reorder::Nops_Needed(Instructions[index],Instructions[i],processor)+1;
             }
             else if(Instructions[index]->s2()==Instructions[i]->d()&&Instructions[index]->s2()!=-1){
-                ans+=Subtree(Dependencies,Instructions,sources,destinations,i,processor)+Kites::Reorder::Nops_Needed(Instructions[index],Instructions[i],processor);
+                ans+=Subtree(Dependencies,Instructions,sources,destinations,i,processor)+Kites::Reorder::Nops_Needed(Instructions[index],Instructions[i],processor)+1;
             }
             //raw reg
             else if((Instructions[index]->d()==Instructions[i]->s1()||Instructions[index]->d()==Instructions[i]->s2())&&Instructions[index]->d()!=-1){
-                ans+=Subtree(Dependencies,Instructions,sources,destinations,i,processor)+Kites::Reorder::Nops_Needed(Instructions[index],Instructions[i],processor);
+                ans+=Subtree(Dependencies,Instructions,sources,destinations,i,processor)+Kites::Reorder::Nops_Needed(Instructions[index],Instructions[i],processor)+1;
             }
             else if(((Instructions[i]->Type()==(type::ld) || Instructions[i]->Type()==(type::sd))&&Instructions[index]->Type()==(type::sd))||(Instructions[index]->Type()==(type::ld)&&Instructions[i]->Type()==(type::sd))){
                 if(!(Instructions[index]->s1()==Instructions[i]->s1()&&(!overlap(Instructions[index]->imm()+Instructions[index]->size(),Instructions[i]->imm()+Instructions[i]->size(),Instructions[index]->imm(),Instructions[i]->imm()))&&Instructions[index]->last_touched_s1==Instructions[i]->last_touched_s1)){
-                    ans+=Subtree(Dependencies,Instructions,sources,destinations,i,processor)+Kites::Reorder::Nops_Needed(Instructions[index],Instructions[i],processor);
+                    ans+=Subtree(Dependencies,Instructions,sources,destinations,i,processor)+Kites::Reorder::Nops_Needed(Instructions[index],Instructions[i],processor)+1;
+                }
+	        }
+        }
+        Dependencies[index]=ans;
+        return ans;
+    }
+}
+
+int Deep(
+    std::vector<int> &Dependencies,
+    std::vector<struct Kites::Reorder::Instruction_Node *> &Instructions,
+    std::vector<std::map<int,int> >&sources,
+    std::vector<std::map<int,int> >&destinations,
+    int index,
+    Kites::Reorder::Proc processor
+){
+    if(Dependencies[index]!=-1){return Dependencies[index];}
+    else{
+        int ans=0;
+        for(int i=index+1;i<Instructions.size();i+=1){
+            //waw reg
+            if(Instructions[i]->d()==Instructions[index]->d()&&Instructions[index]->d()!=-1){
+                ans=std::max(ans,Deep(Dependencies,Instructions,sources,destinations,i,processor)+Kites::Reorder::Nops_Needed(Instructions[index],Instructions[i],processor)+1);
+            }
+            //war reg
+            else if(Instructions[index]->s1()==Instructions[i]->d()&&Instructions[index]->s1()!=-1){
+                ans=std::max(ans,Deep(Dependencies,Instructions,sources,destinations,i,processor)+Kites::Reorder::Nops_Needed(Instructions[index],Instructions[i],processor)+1);
+            }
+            else if(Instructions[index]->s2()==Instructions[i]->d()&&Instructions[index]->s2()!=-1){
+                ans=std::max(ans,Deep(Dependencies,Instructions,sources,destinations,i,processor)+Kites::Reorder::Nops_Needed(Instructions[index],Instructions[i],processor)+1);
+            }
+            //raw reg
+            else if((Instructions[index]->d()==Instructions[i]->s1()||Instructions[index]->d()==Instructions[i]->s2())&&Instructions[index]->d()!=-1){
+                ans=std::max(ans,Deep(Dependencies,Instructions,sources,destinations,i,processor)+Kites::Reorder::Nops_Needed(Instructions[index],Instructions[i],processor)+1);
+            }
+            else if(((Instructions[i]->Type()==(type::ld) || Instructions[i]->Type()==(type::sd))&&Instructions[index]->Type()==(type::sd))||(Instructions[index]->Type()==(type::ld)&&Instructions[i]->Type()==(type::sd))){
+                if(!(Instructions[index]->s1()==Instructions[i]->s1()&&(!overlap(Instructions[index]->imm()+Instructions[index]->size(),Instructions[i]->imm()+Instructions[i]->size(),Instructions[index]->imm(),Instructions[i]->imm()))&&Instructions[index]->last_touched_s1==Instructions[i]->last_touched_s1)){
+                    ans=std::max(ans,Deep(Dependencies,Instructions,sources,destinations,i,processor)+Kites::Reorder::Nops_Needed(Instructions[index],Instructions[i],processor)+1);
                 }
 	        }
         }
@@ -57,7 +95,7 @@ void Ml_Data(
         me[i][1]=Instructions[i]->s1();
         me[i][2]=Instructions[i]->s2();
         me[i][3]=Instructions[i]->d();
-        me[i][4]=Instructions[i]->idx / Instructions.size();
+        me[i][4]=Instructions[i]->idx;
         for(int j=i+1;j<Instructions.size();j+=1){
             if(Kites::Reorder::Edge(Instructions[i],Instructions[j])){
                 adj[i][j]=Kites::Reorder::Nops_Needed(Instructions[i],Instructions[j],p)+1;
@@ -204,6 +242,54 @@ void HeuristicNull(
 ){
     for(struct Instruction_Node * I:Instructions){
         I->priority.push_back(0.0L);
+    }
+}
+
+void HeuristicChildren(
+    std::vector<struct Instruction_Node *> &Instructions,
+    std::vector<std::map<int,int> > &sources,
+    std::vector<std::map<int,int> > &destinations,
+    Proc p
+){
+    for(int index=0;index<Instructions.size();index++){
+        int ans=0;
+        for(int i=index+1;i<Instructions.size();i+=1){
+            //waw reg
+            if(Instructions[i]->d()==Instructions[index]->d()&&Instructions[index]->d()!=-1){
+                ans+=Kites::Reorder::Nops_Needed(Instructions[index],Instructions[i],p)+1;
+            }
+            //war reg
+            else if(Instructions[index]->s1()==Instructions[i]->d()&&Instructions[index]->s1()!=-1){
+                ans+=Kites::Reorder::Nops_Needed(Instructions[index],Instructions[i],p)+1;
+            }
+            else if(Instructions[index]->s2()==Instructions[i]->d()&&Instructions[index]->s2()!=-1){
+                ans+=Kites::Reorder::Nops_Needed(Instructions[index],Instructions[i],p)+1;
+            }
+            //raw reg
+            else if((Instructions[index]->d()==Instructions[i]->s1()||Instructions[index]->d()==Instructions[i]->s2())&&Instructions[index]->d()!=-1){
+                ans+=Kites::Reorder::Nops_Needed(Instructions[index],Instructions[i],p)+1;
+            }
+            else if(((Instructions[i]->Type()==(type::ld) || Instructions[i]->Type()==(type::sd))&&Instructions[index]->Type()==(type::sd))||(Instructions[index]->Type()==(type::ld)&&Instructions[i]->Type()==(type::sd))){
+                if(!(Instructions[index]->s1()==Instructions[i]->s1()&&(!overlap(Instructions[index]->imm()+Instructions[index]->size(),Instructions[i]->imm()+Instructions[i]->size(),Instructions[index]->imm(),Instructions[i]->imm()))&&Instructions[index]->last_touched_s1==Instructions[i]->last_touched_s1)){
+                    ans+=Kites::Reorder::Nops_Needed(Instructions[index],Instructions[i],p)+1;
+                }
+	        }
+        }
+        Instructions[index]->priority.push_back((double)ans);
+    }
+}
+
+void HeuristicDeep(
+    std::vector<struct Instruction_Node *> &Instructions,
+    std::vector<std::map<int,int> > &sources,
+    std::vector<std::map<int,int> > &destinations,
+    Proc p
+){
+    int n = Instructions.size();
+    std::vector<int> Dependecies(n, -1);
+    for(int i = 0; i < Instructions.size(); i += 1) {
+        // Explicit qualification if Subtree is outside the namespace
+        Instructions[i]->priority.push_back((double)(::Deep(Dependecies, Instructions, sources, destinations, i, p)));
     }
 }
 
