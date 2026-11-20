@@ -46,8 +46,13 @@ softmax_val = (exp_val / np.sum(exp_val)).reshape(num_instructions, 1)
 # Combine into n x 65 matrix
 me_vector = np.hstack([oh_r1_r2, oh_r3, softmax_val])
 
-with open("./src/reorder/Weights_new_50.pkl", "rb") as f:
-	save_data = pickle.load(f)
+if(num_instructions<=50):
+	with open("./src/reorder/Weights_25.pkl", "rb") as f:
+		save_data = pickle.load(f)
+else :
+	with open("./src/reorder/Weights_50.pkl", "rb") as f:
+		save_data = pickle.load(f)
+
 children_to_ctx = save_data["children_to_ctx"].copy()
 W1 = save_data["W1"].copy()
 b1 = save_data["b1"].copy()
@@ -58,7 +63,7 @@ W3 = save_data["W3"].copy()
 ids = me_to_id_all(me_vector, adjmatrix, children_to_ctx)
 ps = relu(relu(ids @ W1.T + b1) @ W2.T + b2) @ W3.T
 ps.tofile("/tmp/rl_run/priority_out.bin")
-
+print(ids)
 print("worked")
 
 
