@@ -17,7 +17,7 @@ find_package(Qt6 6.9.2 REQUIRED COMPONENTS Core Widgets Network Concurrent)
 # tests
 option(ENABLE_TESTS "Build tests" OFF)
 option(LOG_PANEL "Enable LogPanel mode" OFF) # will enable log_panel
-option(DISABLE_GUI "Disable GUI components" OFF) # will disable GUI components
+option(DISABLE_GUI "Disable GUI components" ON) # will disable GUI components
 qt_standard_project_setup()
 
 set(CMAKE_AUTOMOC ON)
@@ -44,6 +44,10 @@ file(GLOB_RECURSE UI_FILES "${SRC_DIR}/*.ui")
 file(GLOB_RECURSE HEADER_FILES
     "${SRC_DIR}/*.h")
 
+# The reordering algorithm lives in src/reorder/ and is picked up by the glob above.
+# If you keep a standalone main() there, exclude it so it can't clash with the app's main().
+list(FILTER SRC_FILES EXCLUDE REGEX ".*/src/reorder/main[.]cpp$")
+
 list(APPEND SRC_FILES ${LUA_SRC_FILES})
 
 ##############resourecs setup#################
@@ -66,6 +70,7 @@ add_library(kites_core STATIC
     ${HEADER_FILES}
     ${SRC_FILES}
     ${UI_FILES}
+    src/reorder/reordering.cpp
 )
 
 target_include_directories(kites_core PUBLIC
@@ -124,7 +129,7 @@ install(TARGETS ${PROJECT_NAME}
 )
 
 # Command-line executable (no GUI/QApplication dependency at runtime).
-add_executable(kites_cli cli/main.cpp cli/repl.cpp)
+add_executable(kites_cli cli/main.cpp cli/repl.cpp cli/differential.cpp)
 set_target_properties(kites_cli PROPERTIES OUTPUT_NAME "kites-cli")
 target_link_libraries(kites_cli PRIVATE kites_core)
 target_compile_definitions(kites_cli PRIVATE DISABLE_GUI)

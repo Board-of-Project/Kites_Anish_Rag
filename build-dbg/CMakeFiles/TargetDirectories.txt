@@ -1,0 +1,15 @@
+/run/media/araghava/Windows-SSD/Academics@IITH/Sem3/CompArch/project/Kites_Anish_Rag/build-dbg/CMakeFiles/kites_core.dir
+/run/media/araghava/Windows-SSD/Academics@IITH/Sem3/CompArch/project/Kites_Anish_Rag/build-dbg/CMakeFiles/Kites.dir
+/run/media/araghava/Windows-SSD/Academics@IITH/Sem3/CompArch/project/Kites_Anish_Rag/build-dbg/CMakeFiles/kites_cli.dir
+/run/media/araghava/Windows-SSD/Academics@IITH/Sem3/CompArch/project/Kites_Anish_Rag/build-dbg/CMakeFiles/edit_cache.dir
+/run/media/araghava/Windows-SSD/Academics@IITH/Sem3/CompArch/project/Kites_Anish_Rag/build-dbg/CMakeFiles/rebuild_cache.dir
+/run/media/araghava/Windows-SSD/Academics@IITH/Sem3/CompArch/project/Kites_Anish_Rag/build-dbg/CMakeFiles/list_install_components.dir
+/run/media/araghava/Windows-SSD/Academics@IITH/Sem3/CompArch/project/Kites_Anish_Rag/build-dbg/CMakeFiles/install.dir
+/run/media/araghava/Windows-SSD/Academics@IITH/Sem3/CompArch/project/Kites_Anish_Rag/build-dbg/CMakeFiles/install/local.dir
+/run/media/araghava/Windows-SSD/Academics@IITH/Sem3/CompArch/project/Kites_Anish_Rag/build-dbg/CMakeFiles/install/strip.dir
+/run/media/araghava/Windows-SSD/Academics@IITH/Sem3/CompArch/project/Kites_Anish_Rag/build-dbg/CMakeFiles/kites_core_autogen_timestamp_deps.dir
+/run/media/araghava/Windows-SSD/Academics@IITH/Sem3/CompArch/project/Kites_Anish_Rag/build-dbg/CMakeFiles/kites_core_autogen.dir
+/run/media/araghava/Windows-SSD/Academics@IITH/Sem3/CompArch/project/Kites_Anish_Rag/build-dbg/CMakeFiles/Kites_autogen_timestamp_deps.dir
+/run/media/araghava/Windows-SSD/Academics@IITH/Sem3/CompArch/project/Kites_Anish_Rag/build-dbg/CMakeFiles/Kites_autogen.dir
+/run/media/araghava/Windows-SSD/Academics@IITH/Sem3/CompArch/project/Kites_Anish_Rag/build-dbg/CMakeFiles/kites_cli_autogen_timestamp_deps.dir
+/run/media/araghava/Windows-SSD/Academics@IITH/Sem3/CompArch/project/Kites_Anish_Rag/build-dbg/CMakeFiles/kites_cli_autogen.dir

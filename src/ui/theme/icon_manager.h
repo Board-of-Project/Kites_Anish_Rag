@@ -23,6 +23,7 @@ enum class Icon
     Cache,
     Compiler,
     Profiler,
+    Reorder,
     Open,
     Save,
     Settings,

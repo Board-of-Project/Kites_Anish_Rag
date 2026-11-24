@@ -1,0 +1,72 @@
+#ifndef HEURISTIC_H
+#define HEURISTIC_H
+
+#include "dependency_graph.h"
+#include "utils.h"
+#include <vector>
+#include <map>
+
+namespace Kites::Reorder{
+
+using HeuristicFn =void (*)(
+    std::vector<struct Kites::Reorder::Instruction_Node *> &Instructions,
+    std::vector<std::map<int,int> >&sources,
+    std::vector<std::map<int,int> >&destinations,
+    Proc p
+);
+
+struct HeuristicEntry
+{
+    const char *name;  // shown in the dropdown
+    HeuristicFn fn;
+};
+void Heuristic1(
+    std::vector<struct Kites::Reorder::Instruction_Node *> &Instructions,
+    std::vector<std::map<int,int> >&sources,
+    std::vector<std::map<int,int> >&destinations,
+    Proc p
+);
+void Heuristic2(
+    std::vector<struct Kites::Reorder::Instruction_Node *> &Instructions,
+    std::vector<std::map<int,int> >&sources,
+    std::vector<std::map<int,int> >&destinations,
+    Proc p
+);
+void HeuristicRL1(
+    std::vector<struct Kites::Reorder::Instruction_Node *> &Instructions,
+    std::vector<std::map<int,int> >&sources,
+    std::vector<std::map<int,int> >&destinations,
+    Proc p
+);
+void HeuristicRL2(
+    std::vector<struct Kites::Reorder::Instruction_Node *> &Instructions,
+    std::vector<std::map<int,int> >&sources,
+    std::vector<std::map<int,int> >&destinations,
+    Proc p
+);
+void HeuristicRL(
+    std::vector<struct Instruction_Node *> &Instructions,
+    std::vector<std::map<int,int> > &sources,
+    std::vector<std::map<int,int> > &destinations,
+    Proc p
+);
+void HeuristicNull(
+    std::vector<struct Instruction_Node *> &Instructions,
+    std::vector<std::map<int,int> > &sources,
+    std::vector<std::map<int,int> > &destinations,
+    Proc p
+);
+void HeuristicChildren(
+    std::vector<struct Instruction_Node *> &Instructions,
+    std::vector<std::map<int,int> > &sources,
+    std::vector<std::map<int,int> > &destinations,
+    Proc p
+);
+void HeuristicDeep(
+    std::vector<struct Instruction_Node *> &Instructions,
+    std::vector<std::map<int,int> > &sources,
+    std::vector<std::map<int,int> > &destinations,
+    Proc p
+);
+}
+#endif
