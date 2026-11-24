@@ -46,7 +46,7 @@ namespace Kites
             std::string reorderError;      ///< "Reorder failed: ..." text from a child that exit(6)'d
         };
 
-        std::string ReadFile(const fs::path &path)
+        std::string readFile(const fs::path &path)
         {
             std::ifstream in(path);
             std::ostringstream ss;
@@ -57,7 +57,7 @@ namespace Kites
         /// Keeps only the program's own output: "[Syscall output: ...]" blocks and the exit line.
         /// Everything else the VM prints (PC trace, VM_* status words, summary lines with file names
         /// and instruction counts) legitimately differs between two equivalent programs.
-        std::string ExtractProgramOutput(const std::string &raw)
+        std::string extractProgramOutput(const std::string &raw)
         {
             std::istringstream in(raw);
             std::string line, out;
@@ -80,7 +80,7 @@ namespace Kites
             return out;
         }
 
-        std::map<std::string, std::string> JsonSection(const QJsonObject &root, const char *key)
+        std::map<std::string, std::string> jsonSection(const QJsonObject &root, const char *key)
         {
             std::map<std::string, std::string> result;
             const QJsonObject section = root.value(key).toObject();
@@ -94,18 +94,18 @@ namespace Kites
         /// kites-cli exit code meaning "the reorder step itself threw" (see cli/main.cpp).
         constexpr int kReorderFailedExit = 6;
 
-        fs::path CyclesPath()
+        fs::path cyclesPath()
         {
             return globals::vm_state_directory / "cycles_out.txt";
         }
 
-        fs::path ReorderedHexPath()
+        fs::path reorderedHexPath()
         {
             return globals::vm_state_directory / "reordered_program.hex";
         }
 
         /// "0,2,3" for {0,2,3}: the form accepted by kites-cli --reorder.
-        std::string JoinHeuristics(const std::vector<int> &hs, const char *sep = ",")
+        std::string joinHeuristics(const std::vector<int> &hs, const char *sep = ",")
         {
             std::string out;
             for (size_t i = 0; i < hs.size(); ++i)
@@ -117,7 +117,7 @@ namespace Kites
 
         /// A non-empty reorderHeuristics makes the child apply those built-in heuristics (as one priority
         /// vector) before running.
-        Snapshot RunKites(const std::string &file, const DifferentialOptions &opt,
+        Snapshot runKites(const std::string &file, const DifferentialOptions &opt,
                           const std::vector<int> &reorderHeuristics = {})
         {
             Snapshot snap;
@@ -126,14 +126,14 @@ namespace Kites
             std::ofstream(globals::registers_dump_file_path, std::ios::trunc).close();
             std::ofstream(globals::memory_dump_file_path, std::ios::trunc).close();
             std::error_code removeEc;
-            fs::remove(ReorderedHexPath(), removeEc);
-            fs::remove(CyclesPath(), removeEc);
+            fs::remove(reorderedHexPath(), removeEc);
+            fs::remove(cyclesPath(), removeEc);
 
             QStringList args{QString::fromStdString(file), "--vm", QString::fromStdString(opt.vmName)};
             // memDumpArgs is a flat <addr> <rows> list; each pair needs its own --mem-dump flag.
             if (!opt.cyclesOriginalFile.empty() || !opt.cyclesModifiedFile.empty())
             {
-                args << "--cycles-out" << QString::fromStdString(CyclesPath().string());
+                args << "--cycles-out" << QString::fromStdString(cyclesPath().string());
             }
             if (opt.maxCycles != 0)
             {
@@ -141,7 +141,7 @@ namespace Kites
             }
             if (!reorderHeuristics.empty())
             {
-                args << "--reorder" << QString::fromStdString(JoinHeuristics(reorderHeuristics));
+                args << "--reorder" << QString::fromStdString(joinHeuristics(reorderHeuristics));
             }
             for (size_t i = 0; i + 1 < opt.memDumpArgs.size(); i += 2)
             {
@@ -187,7 +187,7 @@ namespace Kites
                 }
                 return snap; // nothing meaningful was run
             }
-            snap.programOutput = ExtractProgramOutput(proc.readAllStandardOutput().toStdString());
+            snap.programOutput = extractProgramOutput(proc.readAllStandardOutput().toStdString());
 
             QFile regFile(QString::fromStdString(globals::registers_dump_file_path.string()));
             if (regFile.open(QIODevice::ReadOnly))
@@ -196,9 +196,9 @@ namespace Kites
                 const QJsonDocument doc = QJsonDocument::fromJson(regFile.readAll(), &parseError);
                 if (doc.isObject())
                 {
-                    snap.gpr = JsonSection(doc.object(), "gp_registers");
-                    snap.fpr = JsonSection(doc.object(), "fp_registers");
-                    snap.csr = JsonSection(doc.object(), "control and status registers");
+                    snap.gpr = jsonSection(doc.object(), "gp_registers");
+                    snap.fpr = jsonSection(doc.object(), "fp_registers");
+                    snap.csr = jsonSection(doc.object(), "control and status registers");
                 }
                 else
                 {
@@ -210,9 +210,9 @@ namespace Kites
                 snap.registersError = "registers_dump.json missing";
             }
 
-            snap.memoryDump = ReadFile(globals::memory_dump_file_path);
+            snap.memoryDump = readFile(globals::memory_dump_file_path);
 
-            std::ifstream cyclesIn(CyclesPath());
+            std::ifstream cyclesIn(cyclesPath());
             long long cycles = -1;
             if (cyclesIn >> cycles)
             {
@@ -221,7 +221,7 @@ namespace Kites
             return snap;
         }
 
-        void CompareMaps(const std::string &label, const std::map<std::string, std::string> &a,
+        void compareMaps(const std::string &label, const std::map<std::string, std::string> &a,
                          const std::map<std::string, std::string> &b, std::vector<std::string> &diffs)
         {
             for (const auto &[name, value] : a)
@@ -235,7 +235,7 @@ namespace Kites
             }
         }
 
-        std::vector<std::string> SplitLines(const std::string &text)
+        std::vector<std::string> splitLines(const std::string &text)
         {
             std::vector<std::string> lines;
             std::istringstream in(text);
@@ -248,7 +248,7 @@ namespace Kites
         }
 
         /// Returns human-readable differences; empty means the two runs match.
-        std::vector<std::string> Compare(const Snapshot &a, const Snapshot &b, bool compareCsrs)
+        std::vector<std::string> compare(const Snapshot &a, const Snapshot &b, bool compareCsrs)
         {
             std::vector<std::string> diffs;
 
@@ -274,17 +274,17 @@ namespace Kites
                 "\n    generated: " + b.programOutput);
             }
 
-            CompareMaps("", a.gpr, b.gpr, diffs);
-            CompareMaps("", a.fpr, b.fpr, diffs);
+            compareMaps("", a.gpr, b.gpr, diffs);
+            compareMaps("", a.fpr, b.fpr, diffs);
             if (compareCsrs)
             {
-                CompareMaps("csr ", a.csr, b.csr, diffs);
+                compareMaps("csr ", a.csr, b.csr, diffs);
             }
 
             if (a.memoryDump != b.memoryDump)
             {
-                const std::vector<std::string> la = SplitLines(a.memoryDump);
-                const std::vector<std::string> lb = SplitLines(b.memoryDump);
+                const std::vector<std::string> la = splitLines(a.memoryDump);
+                const std::vector<std::string> lb = splitLines(b.memoryDump);
                 for (size_t i = 0; i < std::max(la.size(), lb.size()); ++i)
                 {
                     const std::string sa = i < la.size() ? la[i] : "<missing>";
@@ -300,7 +300,7 @@ namespace Kites
         }
 
         /// Copies the failing input into failDir; report and generated file go to failDir/details.
-        fs::path StoreFailure(const DifferentialOptions &opt, const fs::path &generatedFile,
+        fs::path storeFailure(const DifferentialOptions &opt, const fs::path &generatedFile,
                               const std::string &report, const std::string &tag = "",
                               const std::string &generatedSuffix = "")
         {
@@ -332,14 +332,14 @@ namespace Kites
             return storedInput;
         }
 
-        void StoreAndAnnounce(const DifferentialOptions &opt, const fs::path &generatedFile,
+        void storeAndAnnounce(const DifferentialOptions &opt, const fs::path &generatedFile,
                               const std::string &report, const std::string &tag = "",
                               const std::string &generatedSuffix = "")
         {
             try
             {
                 std::cerr << "Stored copy: "
-                << StoreFailure(opt, generatedFile, report, tag, generatedSuffix).string()
+                << storeFailure(opt, generatedFile, report, tag, generatedSuffix).string()
                 << std::endl;
             }
             catch (const std::exception &e)
@@ -351,7 +351,7 @@ namespace Kites
 
         /// Appends one line to each requested cycles file. Only done when both runs reported cycles, so
         /// line N of the two files always belongs to the same comparison.
-        void AppendCycles(const DifferentialOptions &opt, const Snapshot &original,
+        void appendCycles(const DifferentialOptions &opt, const Snapshot &original,
                           const Snapshot &modified)
         {
             if (original.cycles < 0 || modified.cycles < 0)
@@ -369,7 +369,7 @@ namespace Kites
 
         }
 
-        std::string CyclesSuffix(const Snapshot &original, const Snapshot &modified)
+        std::string cyclesSuffix(const Snapshot &original, const Snapshot &modified)
         {
             if (original.cycles < 0 || modified.cycles < 0)
             {
@@ -381,17 +381,17 @@ namespace Kites
 
         /// In-process reordering: for each heuristic, a child kites-cli applies reorderProgram() to the
         /// assembled words and runs the result directly. No generated file is written or parsed.
-        int RunReorderChecks(const DifferentialOptions &opt, const Snapshot &original)
+        int runReorderChecks(const DifferentialOptions &opt, const Snapshot &original)
         {
             const auto &names = reorder::heuristicNames();
-            int worst = DIFF_MATCH;
+            int worst = DiffMatch;
 
             for (const std::vector<int> &hs : opt.reorderHeuristics)
             {
                 if (hs.empty())
                 {
                     std::cerr << "Empty heuristic list" << std::endl;
-                    return DIFF_BAD_INPUT;
+                    return DiffBadInput;
                 }
                 std::string nameList;
                 for (int h : hs)
@@ -400,15 +400,15 @@ namespace Kites
                     {
                         std::cerr << "Unknown heuristic index " << h << " (valid: 0.." << names.size() - 1
                         << ")" << std::endl;
-                        return DIFF_BAD_INPUT;
+                        return DiffBadInput;
                     }
                     nameList += (nameList.empty() ? "" : " + ") + names[h];
                 }
                 const std::string label = std::string(hs.size() > 1 ? "heuristics " : "heuristic ") +
-                JoinHeuristics(hs) + " (" + nameList + ")";
-                const std::string tag = "h" + JoinHeuristics(hs, "-");
+                joinHeuristics(hs) + " (" + nameList + ")";
+                const std::string tag = "h" + joinHeuristics(hs, "-");
 
-                const Snapshot reordered = RunKites(opt.inputFile, opt, hs);
+                const Snapshot reordered = runKites(opt.inputFile, opt, hs);
 
                 // The reorder step itself failed: crashed, timed out, or threw.
                 if (!reordered.launched || reordered.exitCode == kReorderFailedExit)
@@ -419,42 +419,42 @@ namespace Kites
                     report << "Input: " << opt.inputFile << "\nReorder " << label << " failed: " << why
                     << "\n";
                     std::cerr << "FAIL " << label << ": " << why << std::endl;
-                    StoreAndAnnounce(opt, {}, report.str(), tag);
-                    worst = DIFF_GENERATOR_FAIL;
+                    storeAndAnnounce(opt, {}, report.str(), tag);
+                    worst = DiffGeneratorFail;
                     continue;
                 }
 
-                const std::vector<std::string> diffs = Compare(original, reordered, opt.compareCsrs);
-                AppendCycles(opt, original, reordered);
+                const std::vector<std::string> diffs = compare(original, reordered, opt.compareCsrs);
+                appendCycles(opt, original, reordered);
                 if (diffs.empty())
                 {
-                    std::cout << "MATCH " << label << CyclesSuffix(original, reordered) << std::endl;
+                    std::cout << "MATCH " << label << cyclesSuffix(original, reordered) << std::endl;
                     continue;
                 }
 
                 std::ostringstream report;
                 report << "Input: " << opt.inputFile << "\nReorder " << label
-                << CyclesSuffix(original, reordered) << "\n"
+                << cyclesSuffix(original, reordered) << "\n"
                 << diffs.size() << " difference(s):\n";
                 for (const std::string &d : diffs)
                 {
                     report << "  - " << d << "\n";
                 }
                 std::cerr << "MISMATCH " << label << ": " << report.str();
-                StoreAndAnnounce(opt, ReorderedHexPath(), report.str(), tag, ".reordered.hex");
-                if (worst != DIFF_GENERATOR_FAIL)
+                storeAndAnnounce(opt, reorderedHexPath(), report.str(), tag, ".reordered.hex");
+                if (worst != DiffGeneratorFail)
                 {
-                    worst = DIFF_MISMATCH;
+                    worst = DiffMismatch;
                 }
             }
             return worst;
         }
     } // namespace
 
-    int RunDifferential(const DifferentialOptions &opt)
+    int runDifferential(const DifferentialOptions &opt)
     {
         // 1. Run the original input on Kites.
-        const Snapshot original = RunKites(opt.inputFile, opt);
+        const Snapshot original = runKites(opt.inputFile, opt);
         if (!original.launched || original.exitCode == 1 || original.exitCode == 7)
         {
             std::cerr << "Original input could not be run on Kites ("
@@ -462,13 +462,13 @@ namespace Kites
             : original.exitCode == 7 ? "it did not finish (infinite loop?)"
             : "assembly failed")
             << "); nothing to compare." << std::endl;
-            return DIFF_BAD_INPUT;
+            return DiffBadInput;
         }
 
         // 2a. Built-in reordering (no external executable, no generated file).
         if (!opt.reorderHeuristics.empty())
         {
-            return RunReorderChecks(opt, original);
+            return runReorderChecks(opt, original);
         }
 
         // 2b. Run the external executable: <exe> <input> <output>.
@@ -476,7 +476,7 @@ namespace Kites
         if (!tmp.isValid())
         {
             std::cerr << "Unable to create a temporary directory." << std::endl;
-            return DIFF_GENERATOR_FAIL;
+            return DiffGeneratorFail;
         }
         const fs::path generatedFile = fs::path(tmp.path().toStdString()) /
         ("generated" + fs::path(opt.inputFile).extension().string());
@@ -518,21 +518,21 @@ namespace Kites
             << problem << "\nstderr:\n"
             << gen.readAllStandardError().toStdString() << "\n";
             std::cerr << "FAIL: generator " << problem << std::endl;
-            StoreAndAnnounce(opt, {}, report.str());
-            return DIFF_GENERATOR_FAIL;
+            storeAndAnnounce(opt, {}, report.str());
+            return DiffGeneratorFail;
         }
 
         // 3. Run the generated file on Kites and compare.
-        const Snapshot generated = RunKites(generatedFile.string(), opt);
-        const std::vector<std::string> diffs = Compare(original, generated, opt.compareCsrs);
-        AppendCycles(opt, original, generated);
+        const Snapshot generated = runKites(generatedFile.string(), opt);
+        const std::vector<std::string> diffs = compare(original, generated, opt.compareCsrs);
+        appendCycles(opt, original, generated);
 
         if (diffs.empty())
         {
             std::cout << "MATCH: '" << opt.inputFile
             << "' and its generated file produce identical results."
-            << CyclesSuffix(original, generated) << std::endl;
-            return DIFF_MATCH;
+            << cyclesSuffix(original, generated) << std::endl;
+            return DiffMatch;
         }
 
         std::ostringstream report;
@@ -543,7 +543,7 @@ namespace Kites
             report << "  - " << d << "\n";
         }
         std::cerr << "MISMATCH: " << report.str();
-        StoreAndAnnounce(opt, generatedFile, report.str());
-        return DIFF_MISMATCH;
+        storeAndAnnounce(opt, generatedFile, report.str());
+        return DiffMismatch;
     }
 } // namespace Kites

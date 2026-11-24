@@ -331,7 +331,7 @@ int main(int argc, char *argv[])
         diffOptions.inputFile = assemblyFile;
         diffOptions.vmName = processorTypeStr;
         diffOptions.memDumpArgs = memDumpArgs;
-        return Kites::RunDifferential(diffOptions);
+        return Kites::runDifferential(diffOptions);
     }
 
     if (replRequested || assemblyFile.empty())
@@ -358,7 +358,7 @@ int main(int argc, char *argv[])
             }
         }
 
-        return Kites::RunRepl(manager, state);
+        return Kites::runRepl(manager, state);
     }
 
     Kites::AssembledProgram program;

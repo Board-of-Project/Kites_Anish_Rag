@@ -6,10 +6,10 @@
 #include <vector>
 #include <map>
 
-namespace Kites::Reorder{
+namespace Kites::reorder{
 
 using HeuristicFn =void (*)(
-    std::vector<struct Kites::Reorder::Instruction_Node *> &Instructions,
+    std::vector<struct Kites::reorder::InstructionNode *> &instructions,
     std::vector<std::map<int,int> >&sources,
     std::vector<std::map<int,int> >&destinations,
     Proc p
@@ -20,50 +20,50 @@ struct HeuristicEntry
     const char *name;  // shown in the dropdown
     HeuristicFn fn;
 };
-void Heuristic1(
-    std::vector<struct Kites::Reorder::Instruction_Node *> &Instructions,
+void heuristic1(
+    std::vector<struct Kites::reorder::InstructionNode *> &instructions,
     std::vector<std::map<int,int> >&sources,
     std::vector<std::map<int,int> >&destinations,
     Proc p
 );
-void Heuristic2(
-    std::vector<struct Kites::Reorder::Instruction_Node *> &Instructions,
+void heuristic2(
+    std::vector<struct Kites::reorder::InstructionNode *> &instructions,
     std::vector<std::map<int,int> >&sources,
     std::vector<std::map<int,int> >&destinations,
     Proc p
 );
-void HeuristicRL1(
-    std::vector<struct Kites::Reorder::Instruction_Node *> &Instructions,
+void heuristicRl1(
+    std::vector<struct Kites::reorder::InstructionNode *> &instructions,
     std::vector<std::map<int,int> >&sources,
     std::vector<std::map<int,int> >&destinations,
     Proc p
 );
-void HeuristicRL2(
-    std::vector<struct Kites::Reorder::Instruction_Node *> &Instructions,
+void heuristicRl2(
+    std::vector<struct Kites::reorder::InstructionNode *> &instructions,
     std::vector<std::map<int,int> >&sources,
     std::vector<std::map<int,int> >&destinations,
     Proc p
 );
-void HeuristicRL(
-    std::vector<struct Instruction_Node *> &Instructions,
+void heuristicRl(
+    std::vector<struct InstructionNode *> &instructions,
     std::vector<std::map<int,int> > &sources,
     std::vector<std::map<int,int> > &destinations,
     Proc p
 );
-void HeuristicNull(
-    std::vector<struct Instruction_Node *> &Instructions,
+void heuristicNull(
+    std::vector<struct InstructionNode *> &instructions,
     std::vector<std::map<int,int> > &sources,
     std::vector<std::map<int,int> > &destinations,
     Proc p
 );
-void HeuristicChildren(
-    std::vector<struct Instruction_Node *> &Instructions,
+void heuristicChildren(
+    std::vector<struct InstructionNode *> &instructions,
     std::vector<std::map<int,int> > &sources,
     std::vector<std::map<int,int> > &destinations,
     Proc p
 );
-void HeuristicDeep(
-    std::vector<struct Instruction_Node *> &Instructions,
+void heuristicDeep(
+    std::vector<struct InstructionNode *> &instructions,
     std::vector<std::map<int,int> > &sources,
     std::vector<std::map<int,int> > &destinations,
     Proc p

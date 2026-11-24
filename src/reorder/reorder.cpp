@@ -9,21 +9,21 @@
 namespace Kites
 {
 
-    Reorder::Proc toProc(ProcessorType processor)
+    reorder::Proc toProc(ProcessorType processor)
 {
     switch (processor)
     {
     case ProcessorType::RV5Stage_NH_NF:
-        return Reorder::Proc::NoHazardNoFwd;
+        return reorder::Proc::NoHazardNoFwd;
     case ProcessorType::RV5Stage_H_NF:
-        return Reorder::Proc::HazardNoFwd;
+        return reorder::Proc::HazardNoFwd;
     case ProcessorType::RV5Stage_NH_F:
-        return Reorder::Proc::NoHazardFwd;
+        return reorder::Proc::NoHazardFwd;
     case ProcessorType::RV5Stage_H_F:
-        return Reorder::Proc::HazardFwd;
+        return reorder::Proc::HazardFwd;
     case ProcessorType::RVSS:
     default:
-        return Reorder::Proc::SingleCycle;
+        return reorder::Proc::SingleCycle;
     }
 }
 
@@ -33,9 +33,9 @@ const std::vector<std::string> & reorder::heuristicNames()
     static const std::vector<std::string> names = []
     {
         std::vector<std::string> v;
-        for (size_t i = 0; i < Reorder::heuristicCount(); ++i)
+        for (size_t i = 0; i < reorder::heuristicCount(); ++i)
         {
-            v.emplace_back(Reorder::heuristicName(i));
+            v.emplace_back(reorder::heuristicName(i));
         }
         return v;
     }();
@@ -52,11 +52,11 @@ std::vector<uint32_t> reorder::reorderProgram(const std::vector<uint32_t> &words
     }
     for (std::size_t h : heuristicIndices)
     {
-        if (h >= Reorder::heuristicCount())
+        if (h >= reorder::heuristicCount())
         {
             throw std::invalid_argument("unknown heuristic index " + std::to_string(h));
         }
     }
-    return Reorder::reorderer(words, toProc(processor), heuristicIndices, originalIndex);
+    return reorder::reorderer(words, toProc(processor), heuristicIndices, originalIndex);
 }
 } // namespace Kites::reorder

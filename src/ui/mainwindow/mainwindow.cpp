@@ -12,7 +12,7 @@
 #include "ui/memory_tab/memorytab.h"
 #include "ui/processor_tab/processortab.h"
 #include "ui/profiler_tab/profilertab.h"
-#include "ui/reorder_tab/reordertab.h"
+#include "ui/reorder_tab/reorder_tab.h"
 #include "ui/theme/icon_manager.h"
 #include "ui_mainwindow.h"
 #include "utils/utils.h"

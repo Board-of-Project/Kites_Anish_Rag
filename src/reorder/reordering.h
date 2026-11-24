@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <vector>
 #include "utils.h"
-namespace Kites::Reorder
+namespace Kites::reorder
 {
 // takes the assembled hex words, returns the same words in the new order
 // `heuristics` = indices into the heuristic table; each one appends a component to every

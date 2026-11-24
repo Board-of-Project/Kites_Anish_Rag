@@ -14,6 +14,6 @@ namespace Kites
  * user exits (via 'exit'/'quit'/'q' or EOF on stdin).
  * @return process exit code (0 on a clean exit).
  */
-int RunRepl(ProcessorManager &manager, command_handler::ReplState &state);
+int runRepl(ProcessorManager &manager, command_handler::ReplState &state);
 } // namespace Kites
 

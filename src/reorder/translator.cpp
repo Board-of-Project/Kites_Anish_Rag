@@ -10,8 +10,8 @@
 #include <cstdint>
 
 // reads the instruction from file
-void hex_to_array(std::vector<std::string> &S, std::string input_filename){
-    std::ifstream hexFile(input_filename);
+void hexToArray(std::vector<std::string> &hexLines, std::string inputFilename){
+    std::ifstream hexFile(inputFilename);
     if (!hexFile.is_open()) {
         std::cerr << "Error: Could not open the hex file!" << std::endl;
     }
@@ -23,7 +23,7 @@ void hex_to_array(std::vector<std::string> &S, std::string input_filename){
         lineCount++;
 
         if (line.empty()) continue;
-        S.push_back(line);
+        hexLines.push_back(line);
     }
 
     // Always close the stream
@@ -37,7 +37,7 @@ static inline int32_t sext(uint32_t value, int bits) {
     return static_cast<int32_t>((value ^ m) - m);
 }
 
-std::string hex_to_text(uint32_t instr) {
+std::string hexToText(uint32_t instr) {
     uint32_t opcode = instr & 0x7F;
     uint32_t rd     = (instr >> 7)  & 0x1F;
     uint32_t funct3 = (instr >> 12) & 0x7;
@@ -92,7 +92,7 @@ std::string hex_to_text(uint32_t instr) {
         uint32_t shamt  = (instr >> 20) & 0x3F;   // RV64: 6-bit shift amount
         uint32_t funct6 = (instr >> 26) & 0x3F;   // RV64: upper 6 bits
         std::string name;
-        bool is_shift = false;
+        bool isShift = false;
 
         switch (funct3) {
             case 0x0: name = "addi";  break;
@@ -102,17 +102,17 @@ std::string hex_to_text(uint32_t instr) {
             case 0x6: name = "ori";   break;
             case 0x7: name = "andi";  break;
             case 0x1:
-                if (funct6 == 0x00) { name = "slli"; is_shift = true; }
+                if (funct6 == 0x00) { name = "slli"; isShift = true; }
                 break;
             case 0x5:
-                if (funct6 == 0x00)      { name = "srli"; is_shift = true; }
-                else if (funct6 == 0x10) { name = "srai"; is_shift = true; }
+                if (funct6 == 0x00)      { name = "srli"; isShift = true; }
+                else if (funct6 == 0x10) { name = "srai"; isShift = true; }
                 break;
         }
 
         if (!name.empty())
             out << name << " x" << rd << ", x" << rs1 << ", "
-                << (is_shift ? static_cast<int32_t>(shamt) : imm);
+                << (isShift ? static_cast<int32_t>(shamt) : imm);
         else
             out << "unknown_i_type";
         break;
@@ -230,32 +230,32 @@ std::string hex_to_text(uint32_t instr) {
 }
 
 // write back into a text file
-int write_to_file(std::vector<std::string> &opcode_strings, std::string output_filename) {
-    std::ofstream outfile(output_filename);
+int writeToFile(std::vector<std::string> &opcodeStrings, std::string outputFilename) {
+    std::ofstream outFile(outputFilename);
 
-    if (!outfile.is_open()) {
-        std::cerr << "Error: Could not open file " << output_filename << " for writing.\n";
+    if (!outFile.is_open()) {
+        std::cerr << "Error: Could not open file " << outputFilename << " for writing.\n";
         return 1;
     }
 
-    std::cout << "Decoding " << opcode_strings.size() << " instructions and writing to " << output_filename << "...\n\n";
+    std::cout << "Decoding " << opcodeStrings.size() << " instructions and writing to " << outputFilename << "...\n\n";
 
-    for (const std::string& op_str : opcode_strings) {
+    for (const std::string& opStr : opcodeStrings) {
         // Convert hex string to 32-bit unsigned integer
-        uint32_t instr = std::stoul(op_str, nullptr, 16);
+        uint32_t instr = std::stoul(opStr, nullptr, 16);
 
         // Decode instruction into assembly text
-        std::string decoded = hex_to_text(instr);
+        std::string decoded = hexToText(instr);
 
         // Write instruction to text file line by line
-        outfile << decoded << "\n";
+        outFile << decoded << "\n";
 
         // Print progress to console
         std::cout << decoded << "\n";
     }
 
-    outfile.close();
-    std::cout << "\nSuccessfully written all decoded instructions to '" << output_filename << "'.\n";
+    outFile.close();
+    std::cout << "\nSuccessfully written all decoded instructions to '" << outputFilename << "'.\n";
 
     return 0;
 }

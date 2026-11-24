@@ -11,9 +11,9 @@
 #include <sstream>
 #include <cstdint>
 
-void hex_to_array(std::vector<std::string> &S, std::string input_filename="instructions.hex");
-std::string hex_to_text(uint32_t instr);
-int write_to_file(std::vector<std::string> &opcode_strings, std::string output_filename="/tmp/comp_arch/tests/code2.s");
+void hexToArray(std::vector<std::string> &hexLines, std::string inputFilename="instructions.hex");
+std::string hexToText(uint32_t instr);
+int writeToFile(std::vector<std::string> &opcodeStrings, std::string outputFilename="/tmp/comp_arch/tests/code2.s");
 
 
 #endif

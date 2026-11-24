@@ -33,15 +33,15 @@ namespace Kites
     /// Process exit codes used by the differential mode (0-3 are shared with the normal CLI).
     enum DifferentialExit
     {
-        DIFF_MATCH = 0,
-        DIFF_BAD_INPUT = 1,      ///< the original input did not assemble / run setup failed
-        DIFF_MISMATCH = 4,       ///< the two runs disagree (input stored in failDir)
-        DIFF_GENERATOR_FAIL = 5, ///< the executable crashed, timed out or produced no file (stored)
+        DiffMatch = 0,
+        DiffBadInput = 1,      ///< the original input did not assemble / run setup failed
+        DiffMismatch = 4,       ///< the two runs disagree (input stored in failDir)
+        DiffGeneratorFail = 5, ///< the executable crashed, timed out or produced no file (stored)
     };
 
     /**
      * @brief Runs the full check described in the file comment.
      * @return one of DifferentialExit.
      */
-    int RunDifferential(const DifferentialOptions &options);
+    int runDifferential(const DifferentialOptions &options);
 } // namespace Kites

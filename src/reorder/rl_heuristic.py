@@ -47,10 +47,10 @@ softmax_val = (exp_val / np.sum(exp_val)).reshape(num_instructions, 1)
 me_vector = np.hstack([oh_r1_r2, oh_r3, softmax_val])
 
 if(num_instructions<=50):
-	with open("./src/reorder/Weights_25.pkl", "rb") as f:
+	with open("./src/reorder/weights_25.pkl", "rb") as f:
 		save_data = pickle.load(f)
 else :
-	with open("./src/reorder/Weights_50.pkl", "rb") as f:
+	with open("./src/reorder/weights_50.pkl", "rb") as f:
 		save_data = pickle.load(f)
 
 children_to_ctx = save_data["children_to_ctx"].copy()

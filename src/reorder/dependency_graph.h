@@ -6,33 +6,33 @@
 #include <map>
 #include <cstdint>
 
-static inline int32_t sign_extend(uint32_t value, int bits) {
+static inline int32_t signExtend(uint32_t value, int bits) {
     int shift = 32 - bits;
     return (int32_t)(value << shift) >> shift;
 }
-enum class type {R, ld, sd, branch, misc, I};
-namespace Kites::Reorder{
+enum class InstructionKind {R, Ld, Sd, Branch, Misc, I};
+namespace Kites::reorder{
 
-struct Instruction_Node {
+struct InstructionNode {
     // ---- stored fields ----
     uint32_t instr = 0;          // raw encoding
     int32_t  idx = 0;
     std::vector<double> priority;
-    int32_t  expected_index = 0;
-    int32_t  last_touched_s1 = -1;
-    bool branch_flag;
+    int32_t  expectedIndex = 0;
+    int32_t  lastTouchedS1 = -1;
+    bool branchFlag;
     // ---- decoded on demand ----
     int opcode() const { return instr & 0x7F; }
     int funct3() const { return (instr >> 12) & 7; }
 
-    type Type() const {
+    InstructionKind type() const {
         switch (opcode()) {
-            case 0x33: case 0x3B: return type::R;
-            case 0x03:            return type::ld;
-            case 0x13:            return type::I;
-            case 0x23:            return type::sd;
-            case 0x63: case 0x67: case 0x6F: return type::branch;
-            default:              return type::misc;
+            case 0x33: case 0x3B: return InstructionKind::R;
+            case 0x03:            return InstructionKind::Ld;
+            case 0x13:            return InstructionKind::I;
+            case 0x23:            return InstructionKind::Sd;
+            case 0x63: case 0x67: case 0x6F: return InstructionKind::Branch;
+            default:              return InstructionKind::Misc;
         }
     }
 
@@ -70,20 +70,20 @@ struct Instruction_Node {
 
     int imm() const {
         switch (opcode()) {
-            case 0x03: return sign_extend(instr >> 20, 12);
-            case 0x23: return sign_extend(((instr >> 25) << 5) | ((instr >> 7) & 0x1F), 12);
+            case 0x03: return signExtend(instr >> 20, 12);
+            case 0x23: return signExtend(((instr >> 25) << 5) | ((instr >> 7) & 0x1F), 12);
             default:   return 0;
         }
     }
 
-    int branch_jump() const {
+    int branchJump() const {
         switch (opcode()) {
             case 0x63: {
                 uint32_t i = (((instr >> 31) & 0x1)  << 12) |
                              (((instr >> 7)  & 0x1)  << 11) |
                              (((instr >> 25) & 0x3F) << 5)  |
                              (((instr >> 8)  & 0xF)  << 1);
-                return sign_extend(i, 13);
+                return signExtend(i, 13);
             }
             case 0x67: return (int32_t)instr >> 20;
             case 0x6F: {
@@ -91,7 +91,7 @@ struct Instruction_Node {
                              (((instr >> 12) & 0xFF)  << 12) |
                              (((instr >> 20) & 0x1)   << 11) |
                              (((instr >> 21) & 0x3FF) << 1);
-                return sign_extend(i, 21);
+                return signExtend(i, 21);
             }
             default: return 0;
         }
@@ -108,9 +108,9 @@ struct Instruction_Node {
 };
 
 // Custom comparator for pointers
-struct Compare_Instructions {
+struct CompareInstructions {
     // Both arguments must be pointers, and the function MUST be marked const
-    bool operator()(const Instruction_Node* a, const Instruction_Node* b) const {
+    bool operator()(const InstructionNode* a, const InstructionNode* b) const {
         // Always add a safety check for null pointers if applicable
         if (!a || !b) return false; 
         
@@ -130,13 +130,13 @@ struct Compare_Instructions {
 };
 
 // Function declarations
-struct Instruction_Node* Instruction_Decode(const uint32_t instruction, int index);
-int Read_File(std::vector<struct Kites::Reorder::Instruction_Node*>& Instructions, std::vector<uint32_t>&Hexcodes);
-void Read_File_for_branch(std::vector <std::vector <struct Kites::Reorder::Instruction_Node*> >& Instruction_blocks, const std::vector<uint32_t>&Hexcodes);
-void Make_Graph(std::vector<struct Kites::Reorder::Instruction_Node*>& Instructions, 
+struct InstructionNode* instructionDecode(const uint32_t instruction, int index);
+int readFile(std::vector<struct Kites::reorder::InstructionNode*>& instructions, std::vector<uint32_t>&hexcodes);
+void readFileForBranch(std::vector <std::vector <struct Kites::reorder::InstructionNode*> >& instructionBlocks, const std::vector<uint32_t>&hexcodes);
+void makeGraph(std::vector<struct Kites::reorder::InstructionNode*>& instructions, 
                 std::vector<std::map<int,int>>& soruces, 
                std::vector<std::map<int,int>>& destination,
-               std::vector<std::map<int,int>>& load_stores
+               std::vector<std::map<int,int>>& loadStores
             );
 }
 #endif

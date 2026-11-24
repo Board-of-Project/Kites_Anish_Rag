@@ -20,7 +20,7 @@ namespace Kites
 {
 namespace
 {
-void PrintRegisters(std::ostream &os, RegisterFile &registers)
+void printRegisters(std::ostream &os, RegisterFile &registers)
 {
     std::vector<uint64_t> gpr = registers.GetGprValues();
     os << "General-purpose registers:\n";
@@ -47,7 +47,7 @@ void PrintRegisters(std::ostream &os, RegisterFile &registers)
     }
 }
 
-void PrintInfo(std::ostream &os, ProcessorManager &manager)
+void printInfo(std::ostream &os, ProcessorManager &manager)
 {
     os << "PC:                    0x" << std::hex << manager.getProgramCounter() << std::dec
        << "\n"
@@ -59,7 +59,7 @@ void PrintInfo(std::ostream &os, ProcessorManager &manager)
        << "Branch mispredictions: " << manager.getBranchMispredictions() << "\n";
 }
 
-void PrintBreakpoints(std::ostream &os, const command_handler::ReplState &state)
+void printBreakpoints(std::ostream &os, const command_handler::ReplState &state)
 {
     if (state.breakpoints.empty())
     {
@@ -73,41 +73,57 @@ void PrintBreakpoints(std::ostream &os, const command_handler::ReplState &state)
     }
 }
 
-void PrintDisassembly(std::ostream &os, AssembledProgram &program)
+void printDisassembly(std::ostream &os, AssembledProgram &program)
 {
     DumpDisasssembly(globals::disassembly_file_path, program);
     std::ifstream in(globals::disassembly_file_path);
     os << in.rdbuf();
 }
 
-void PrintHelp(std::ostream &os)
+void printHelp(std::ostream &os)
 {
     os << "Commands:\n"
-       << "  load <file> [--vm <name>]     assemble and load a program\n"
-       << "                                 vm: rvss (default) | rv5-nh-nf | rv5-h-nf | "
-          "rv5-nh-f | rv5-h-f\n"
-       << "  run                           run to completion\n"
-       << "  run_debug | rd                run until the next breakpoint\n"
-       << "  step [n] | s [n]              execute n instructions (default 1)\n"
-       << "  stop                          request the running program to stop\n"
-       << "  undo | u                      step backward through executed instructions\n"
-       << "  redo | r                      step forward through undone instructions\n"
-       << "  reset                         reset the VM to its initial state\n"
-       << "  add_breakpoint <line>         break at a source line number\n"
-       << "  remove_breakpoint <line>      remove a breakpoint\n"
-       << "  breakpoints                   list current breakpoints\n"
-       << "  modify_register <reg> <val> | mreg\n"
-       << "  print_mem <hex_addr> <rows> | pmem\n"
-       << "  dump_mem <hex_addr> <rows> [<hex_addr> <rows>]... | dmem\n"
-       << "  vm_stdin <text> | vmsin       feed input to a program blocked on a read syscall\n"
-       << "  regs                          print all registers\n"
-       << "  disas                         print disassembly of the loaded program\n"
-       << "  info                          print PC/cycles/CPI/IPC/stats\n"
-       << "  help                          show this message\n"
-       << "  exit | quit | q               leave the REPL\n";
+    << "  load <file> [--vm <name>]     assemble and load a program\n"
+    << "                                 vm: rvss (default) | rv5-nh-nf | rv5-h-nf | "
+    "rv5-nh-f | rv5-h-f\n"
+    << "  run                           run to completion\n"
+    << "  run_debug | rd                run until the next breakpoint\n"
+    << "  step [n] | s [n]              execute n instructions (default 1)\n"
+    << "  stop                          request the running program to stop\n"
+    << "  undo | u                      step backward through executed instructions\n"
+    << "  redo | r                      step forward through undone instructions\n"
+    << "  reset                         reset the VM to its initial state\n"
+    << "  add_breakpoint <line>         break at a source line number\n"
+    << "  remove_breakpoint <line>      remove a breakpoint\n"
+    << "  breakpoints                   list current breakpoints\n"
+    << "  modify_register <reg> <val> | mreg\n"
+    << "  print_mem <hex_addr> <rows> | pmem\n"
+    << "  dump_mem <hex_addr> <rows> [<hex_addr> <rows>]... | dmem\n"
+    << "  vm_stdin <text> | vmsin       feed input to a program blocked on a read syscall\n"
+    << "  regs                          print all registers\n"
+    << "  disas                         print disassembly of the loaded program\n"
+    << "  info                          print PC/cycles/CPI/IPC/stats\n"
+    << "  help                          show this message\n"
+    << "  exit | quit | q               leave the REPL\n"
+    << "\nCLI / batch-only features (not available with --repl / in REPL):\n"
+    << "  --reorder <n[,n...]>          apply built-in reorder heuristic priority vector\n"
+    << "                                 (comma-separated indices, e.g. 0,2,3; no spaces)\n"
+    << "  --list-heuristics             print heuristic names and indices\n"
+    << "  --compare-exe <path>          differential check vs. <path> <asm> <gen>\n"
+    << "                                 (copies mismatches to --fail-dir; batch only)\n"
+    << "  --compare-reorder <n[,n...]|all>\n"
+    << "                                 in-process differential check of reorder heuristic(s)\n"
+    << "                                 (repeatable; 'all' runs each heuristic alone; batch only)\n"
+    << "  --fail-dir <dir>              directory for failing differential inputs (default: ./kites_failures)\n"
+    << "  --timeout <sec>               timeout per generator/Kites run in seconds (default: 60)\n"
+    << "  --max-cycles <n>              stop runaway batch runs after n cycles (default: 20000)\n"
+    << "  --cycles-out <file>           write total cycles to <file> (pipelined VMs only)\n"
+    << "  --cycles-original <file>      with --compare-*: append original program cycles\n"
+    << "  --cycles-modified <file>      with --compare-*: append reordered/generated cycles\n"
+    << "  --compare-csr                 also compare CSRs during differential runs\n";
 }
 
-std::string FirstToken(const std::string &line)
+std::string firstToken(const std::string &line)
 {
     std::istringstream iss(line);
     std::string token;
@@ -116,7 +132,7 @@ std::string FirstToken(const std::string &line)
 }
 } // namespace
 
-int RunRepl(ProcessorManager &manager, command_handler::ReplState &state)
+int runRepl(ProcessorManager &manager, command_handler::ReplState &state)
 {
     QObject::connect(&manager, &ProcessorManager::runErrorSignal, &manager,
                       [](const QString &message, int sourceLine)
@@ -147,7 +163,7 @@ int RunRepl(ProcessorManager &manager, command_handler::ReplState &state)
             break;
         }
 
-        std::string first = FirstToken(line);
+        std::string first = firstToken(line);
         if (first.empty())
         {
             continue;
@@ -155,22 +171,22 @@ int RunRepl(ProcessorManager &manager, command_handler::ReplState &state)
 
         if (first == "help")
         {
-            PrintHelp(std::cout);
+            printHelp(std::cout);
             continue;
         }
         if (first == "regs")
         {
-            PrintRegisters(std::cout, *manager.getRegisterFile());
+            printRegisters(std::cout, *manager.getRegisterFile());
             continue;
         }
         if (first == "info")
         {
-            PrintInfo(std::cout, manager);
+            printInfo(std::cout, manager);
             continue;
         }
         if (first == "breakpoints")
         {
-            PrintBreakpoints(std::cout, state);
+            printBreakpoints(std::cout, state);
             continue;
         }
         if (first == "disas")
@@ -180,7 +196,7 @@ int RunRepl(ProcessorManager &manager, command_handler::ReplState &state)
                 std::cerr << "error: no program loaded\n";
                 continue;
             }
-            PrintDisassembly(std::cout, state.currentProgram);
+            printDisassembly(std::cout, state.currentProgram);
             continue;
         }
 
